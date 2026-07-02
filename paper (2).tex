@@ -1,0 +1,405 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% ============================================================
+% PACKAGES
+% ============================================================
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage[hidelinks]{hyperref}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+% ============================================================
+% [SECTION: TITLE BLOCK]
+% Paste/replace author names, affiliations, emails here.
+% ============================================================
+\title{Effect of Prompt Length on AI Response Quality: \\ An Evidential Reasoning Approach \\ \large A Single-Task Pilot Study}
+
+\author{
+\begin{minipage}[t]{0.30\textwidth}
+\centering
+\small
+Dr. Tanjim Mahmud (Supervisor) \\
+\textit{Associate Professor} \\
+\textit{Department of Computer Science and Engineering} \\
+\textit{Rangamati Science and Technology University} \\
+Rangamati, Bangladesh \\
+tanjim.cse@rmstu.ac.bd
+\end{minipage}%
+\hspace{0.04\textwidth}
+\begin{minipage}[t]{0.30\textwidth}
+\centering
+\small
+Joyee Das \\
+\textit{Dept. of Computer Science and Engineering} \\
+\textit{Rangamati Science and Technology University} \\
+Rangamati, Bangladesh \\
+joyee.das.porna.pinki@gmail.com
+\end{minipage}%
+\hspace{0.04\textwidth}
+\begin{minipage}[t]{0.30\textwidth}
+\centering
+\small
+Soroj Dev \\
+\textit{Dept. of Computer Science and Engineering} \\
+\textit{Rangamati Science and Technology University} \\
+Rangamati, Bangladesh \\
+dipsoroj2001@gmail.com
+\end{minipage}
+}
+
+\maketitle
+
+% ============================================================
+% [SECTION: ABSTRACT]
+% ============================================================
+\begin{abstract}
+\textit{Note to reviewers: This is a single-task pilot study conducted with a predominantly undergraduate sample. Findings should not be generalised beyond the specific task and sample described below without further replication.}
+
+Prompt length is one of the most direct and controllable levers a user has over the behaviour of a large language model (LLM), yet its effect on response quality is reported inconsistently across the literature. Most existing evaluations rely on single-point performance metrics that treat AI response quality as a single deterministic value rather than as a multi-dimensional and uncertain judgment. This pilot study investigates the effect of prompt length---short, medium, and long---on perceived AI response quality across five interdependent criteria: accuracy, relevance, completeness, clarity, and reasoning quality. We employ a within-subjects design with a 114-respondent survey (predominantly undergraduate students) rating AI responses to a single FIFA World Cup prediction task. An Evidential Reasoning (ER) framework, informed by literature-derived Analytic Network Process (ANP) criteria weights, aggregates uncertain, multi-criteria human judgments into a composite quality score. Friedman tests and Wilcoxon signed-rank post-hoc comparisons (Bonferroni-corrected) confirm that the long-prompt condition produced statistically significantly higher ratings than both short and medium conditions for Accuracy, Completeness, Clarity, and Reasoning Quality, but not for Relevance. Effect sizes at the omnibus (Friedman) level were small (Kendall's $W = 0.05$--$0.08$); pairwise rank-biserial effect sizes for significant comparisons ranged from $r = 0.25$ to $r = 0.39$. Sensitivity analysis shows the composite ordering (Short $<$ Medium $<$ Long) is preserved under both ANP and equal weighting. These results provide preliminary evidence for prompt-length effects within a single task context; multi-task replication with diverse samples and expert-elicited criterion weights is necessary before broader conclusions can be drawn.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Prompt Engineering, Large Language Models, Prompt Length, Pilot Study, Evidential Reasoning, Analytic Network Process, Response Quality Evaluation, Uncertainty Modelling
+\end{IEEEkeywords}
+
+% ============================================================
+% [SECTION: AI ASSISTANCE DISCLOSURE]
+% Many venues now want this as its own block, often right after
+% keywords or in an Acknowledgment/Statements section near the end.
+% Kept here for visibility; move to wherever your target venue
+% requires it (check the journal's author guidelines).
+% ============================================================
+\section*{Statement on the Use of AI Assistance}
+Generative AI tools (Claude, Anthropic) were used during the preparation of this manuscript to assist with statistical computation, verification of cited sources against original publications, language editing, and drafting support. Specifically: (1) AI assistance was used to write and execute Python code (pandas, scipy.stats) for parsing the raw survey export and computing the Friedman tests, Wilcoxon signed-rank post-hoc comparisons, and ANP/equal-weighted composite scores reported in Sections IV and V; (2) AI-assisted web search was used to verify the author names, publication venues, and identifiers of all cited works against original sources (arXiv, publisher pages, and indexing services), and two citation errors present in an earlier draft were identified and corrected as a result; (3) AI assistance was used in editing and organising the prose of this manuscript. All statistical results were independently computed from the raw respondent-level data (available in the supplementary spreadsheet) and are reproducible from the data and the described methodology. The authors reviewed, verified, and take full responsibility for all content, analyses, and conclusions presented in this paper.
+
+% ============================================================
+% [SECTION 1: INTRODUCTION]
+% ============================================================
+\section{Introduction}
+Large Language Models (LLMs) such as GPT, Gemini, Claude, and LLaMA have become central to how people search for information, write, code, and make decisions. Because the model itself is typically not directly modifiable by an end user, the prompt is the single most accessible lever for shaping the quality of the output.
+
+Among the many properties of a prompt that can be varied---wording, structure, specificity, the presence of examples---prompt length is one of the simplest to manipulate and one of the most frequently discussed in both academic literature and everyday practice. A short prompt is fast to write but may leave the model without sufficient context; a long prompt provides more grounding but risks introducing irrelevant information or competing instructions.
+
+The empirical evidence on this trade-off is mixed. Domain-specific studies report that long, context-rich prompts generally outperform short ones, while research on long-context reasoning shows that simply having a large context window does not guarantee effective reasoning. A second gap concerns how AI response quality is measured: the overwhelming majority of existing studies rely on automated, single-dimensional metrics that say little about whether a response is clear, well-reasoned, complete, or genuinely useful.
+
+The present paper addresses both gaps. It reports a single-task pilot study in which 114 participants (predominantly undergraduates) rated AI responses to a FIFA World Cup prediction question posed at three prompt lengths, evaluated across five quality criteria. We additionally propose and apply an Evidential Reasoning framework---informed by literature-derived ANP criteria weights---to aggregate multi-criteria, multi-rater judgments. Crucially, all inferential claims are grounded in formal statistical tests (Friedman and Wilcoxon), independently verified by recomputing every reported statistic directly from the raw respondent-level data, and the study's scope is explicitly bounded: these findings should not be generalised beyond this task type and sample without replication.
+
+The remainder of this paper is organised as follows. Section II reviews related work. Section III describes the methodology. Section IV presents results, including inferential statistics. Section V introduces the ER evaluation framework. Section VI discusses implications and limitations. Section VII concludes.
+
+% ============================================================
+% [SECTION 2: LITERATURE REVIEW]
+% ============================================================
+\section{Literature Review}
+
+\subsection{The Analytic Network Process in Multi-Criteria Decision Making}
+The Analytic Network Process (ANP), introduced by Saaty as a generalisation of the Analytic Hierarchy Process (AHP), is a multi-criteria decision-making (MCDM) method designed for problems in which evaluation criteria are not independent \cite{saaty2001}. ANP represents a decision problem as a network of clusters and elements, allowing both inner and outer dependencies, including feedback loops. For AI-generated text evaluation, ANP is attractive because response-quality dimensions---accuracy, relevance, clarity, completeness, and reasoning quality---plausibly influence one another rather than acting independently.
+
+Despite this fit, the literature integrating ANP with LLM evaluation remains sparse. Importantly, in this pilot study the ANP weights used for the composite score are literature-informed and analytically constructed (Section V-B), not elicited from survey respondents---a distinction we address explicitly in the methodology.
+
+\subsection{Prompt Engineering and Large Language Models}
+LLMs are Transformer-based models trained primarily through next-token prediction. Output quality is shaped by the interaction of the input prompt, decoding hyperparameters, and training data, but among these the prompt is the only factor a typical end user can control directly. Prompt engineering is the practice of designing prompts to improve accuracy, relevance, clarity, and usefulness while reducing hallucination \cite{sahoo2024}. Techniques include Chain-of-Thought (CoT) prompting \cite{wei2022}, Self-Consistency, Generated Knowledge prompting, and Few-Shot/Zero-Shot approaches \cite{kojima2022}. Most studies evaluate success through task performance metrics alone, rarely applying structured, multi-criteria evaluation frameworks.
+
+\subsection{Effect of Prompt Length on LLM Performance}
+Liu, Wang, and Willard \cite{liu2025} examined prompt length effects across nine domain-specific tasks, finding that Long Instructions improved F1-scores on most tasks while Short Instructions reduced performance. Balaji, Lokesha, Chandana, and Pushpa \cite{balaji2024} found that longer, more specific prompts improved chatbot responses across relevance, accuracy, and completeness, using the Cornell Movie Dialogs Corpus with DistilBERT, BERT, RoBERTa, and XLNet. Sabbatella, Ponti, Giordani, Candelieri, and Archetti \cite{sabbatella2024} applied Bayesian Optimisation to discrete prompt search and found that beyond a certain length, prompts can overfit---qualifying the general claim that ``longer is better.''
+
+\subsection{Long-Context Reasoning Limitations}
+Levy, Jacoby, and Goldberg \cite{levy2024} introduced the FLenQA benchmark, which isolates input-length effects by holding task difficulty constant while embedding the relevant content within irrelevant padding text of varying length. Across GPT-3.5, GPT-4, Gemini Pro, Mistral Medium, and Mixtral, reasoning accuracy fell from approximately 92\% in short contexts to approximately 68\% in longer contexts, with degradation beginning around 3{,}000 tokens---far short of advertised context windows. The ``lost in the middle'' effect, documented separately by Liu et al. \cite{liu2024lostmiddle}, further shows that the position of relevant information within a long context substantially affects performance, with information at the end of the context processed most accurately and information in the middle processed least accurately.
+
+\subsection{Research Gap}
+Across the reviewed literature, three gaps recur: (1) AI response quality is treated as one-dimensional; (2) interdependence among quality dimensions is not modelled; (3) uncertainty and disagreement in human judgment are largely ignored. No unified framework combines ANP-based criteria weighting, ER-based uncertainty aggregation, and formal statistical testing of prompt-length effects across multiple quality dimensions. This pilot study addresses all three gaps at small scale and identifies the requirements for a full-scale replication.
+
+% ============================================================
+% [SECTION 3: METHODOLOGY]
+% ============================================================
+\section{Methodology}
+
+\subsection{Research Design}
+This study uses a mixed-methods within-subjects design combining (a) a cross-sectional survey of AI tool users' general attitudes and experiences regarding prompt length, and (b) a controlled within-subjects rating exercise in which the same underlying question was posed to an AI assistant at three distinct prompt lengths---short, medium, and long---and the resulting responses were rated by every participant on five quality criteria.
+
+\subsection{Participants}
+A total of 114 participants completed the survey instrument. The majority were undergraduate students ($n = 101$; 89\%), with smaller numbers of postgraduate/PhD students ($n = 7$), industry professionals ($n = 2$), and others ($n = 4$). In terms of AI tool experience, 50 participants reported 1--2 years of use, 45 reported more than 2 years, 13 reported 6 months to 1 year, and 6 reported less than 6 months.
+
+\textit{Scope note:} The sample is predominantly undergraduate and was recruited from a single institution. All inferential results should be interpreted as pertaining to this sample and task type only. Generalisation to other populations, task domains, or prompt-length ranges requires independent replication.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\columnwidth]{figures/fig4_participant_composition.pdf}
+\caption{Participant composition by role ($N=114$).}
+\label{fig:composition}
+\end{figure}
+
+\subsection{Controlled Three-Tier Prompting Task}
+To isolate the effect of prompt length while holding the underlying task constant, each participant was shown three AI-generated responses to the same general question (``Who is likely to win the next FIFA World Cup?''), each elicited using a prompt of different length:
+\begin{itemize}
+\item \textbf{Short prompt:} a single, minimal-context question with no supporting instructions.
+\item \textbf{Medium prompt:} the same question with a brief request to explain the answer with reference to team strength, performance, and players.
+\item \textbf{Long prompt:} the same question expanded into a multi-part instruction naming six candidate teams and asking for a detailed, multi-factor analysis covering performance, player quality, recent results, teamwork, and tactical strength, followed by a reasoned final prediction.
+\end{itemize}
+
+For each response, participants rated five criteria on a 1--5 scale: Accuracy (correctness of information), Relevance (staying on topic), Completeness (coverage of the prompt), Clarity (understanding and readability), and Reasoning Quality (logical thinking quality). This single-task, single-topic design is appropriate for a pilot study establishing whether the ANP/ER framework is feasible, but is not sufficient to generalise findings across task types---a limitation addressed explicitly in Section VI.
+
+\subsection{ANP Criteria Weighting: Source and Rationale}
+\textit{Important clarification:} The ANP pairwise comparison weights used to compute the composite quality score in Section V are literature-informed and analytically constructed---they are not elicited from the 114 survey respondents. The weights (Accuracy 0.28, Relevance 0.22, Clarity 0.20, Reasoning Quality 0.18, Completeness 0.12) are derived from (a) the frequency with which respondents selected each criterion as ``most important'' in the general attitude questions (Section IV-A), used as a qualitative ordering check, and (b) judgments from the prompt-engineering and response-quality literature \cite{liu2025,balaji2024}, which consistently place accuracy and relevance above completeness and reasoning quality in importance rankings.
+
+A full ANP implementation---with a formal pairwise comparison survey instrument distributed to respondents or expert panels, consistency checking, and supermatrix derivation---is identified as a requirement for a future full-scale study (Section VII). The current weights should therefore be treated as illustrative rather than definitive, and we include a sensitivity analysis (Section V-F) showing that the composite ordering is robust to the weighting scheme.
+
+One respondent did not provide a rating for Reasoning Quality under the Medium-prompt condition. This respondent is included in all single-criterion analyses for which their data is complete ($N=114$ for all criteria except Reasoning Quality, where $N=113$) and excluded only from the composite-score calculations in Section V, which use complete-case data ($N=113$).
+
+\subsection{Statistical Analysis Plan}
+Given the within-subjects design and ordinal (1--5 scale) data, inferential statistics used non-parametric tests throughout. The analytical plan was as follows:
+\begin{itemize}
+\item Friedman test (non-parametric repeated-measures equivalent of one-way ANOVA) applied to each of the five criteria and the ANP-weighted composite score, testing the null hypothesis that ratings are identical across Short, Medium, and Long conditions.
+\item Wilcoxon signed-rank post-hoc pairwise comparisons (Short vs.\ Medium, Short vs.\ Long, Medium vs.\ Long) for each criterion where the Friedman test was significant ($p<.05$), with Bonferroni correction for three comparisons per criterion (adjusted $\alpha = .05/3 = .0167$).
+\item Effect sizes reported as Kendall's $W$ for Friedman tests and rank-biserial correlation $r$ for Wilcoxon tests ($r = |Z|/\sqrt{n}$).
+\item Sensitivity analysis comparing ANP-weighted and equal-weighted composite scores to assess whether the ranking of conditions depends on the weighting scheme.
+\end{itemize}
+
+All analyses were conducted in Python 3 using \texttt{scipy.stats}, and were independently re-executed against the raw respondent-level data as part of preparing this manuscript to confirm reproducibility. Raw per-respondent ratings ($114 \times 3$ conditions $\times$ 5 criteria) are available in the accompanying spreadsheet.
+
+% ============================================================
+% [SECTION 4: RESULTS]
+% ============================================================
+\section{Results}
+
+\subsection{General Attitudes Toward Prompt Length}
+A clear majority of participants believed prompt length affects response quality: 18 reported ``Yes, strongly'' and 13 reported ``Yes, somewhat,'' compared with only 4 who reported no effect. Medium-length prompts (3--5 sentences) were the most common single preferred length (17 responses), though 15 respondents felt that ideal length ``depends on the task.'' Mean satisfaction scores were higher for long/detailed prompts ($M=3.6$) than for short prompts ($M=3.2$). When asked which qualities matter most, Accuracy was selected most often (69 selections), followed by Relevance (45), Clarity (42), Completeness (23), and other factors (12). This ordering informed the literature-derived ANP weighting described in Section III-D.
+
+Most respondents acknowledged that their judgment varies with mood or context at least ``somewhat'' (64) or ``a lot'' (20), with only 30 reporting rarely inconsistent judgments---precisely the evaluator-level uncertainty that point-estimate averaging fails to capture, and that the ER framework is designed to address.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\columnwidth]{figures/fig3_quality_importance.pdf}
+\caption{Response-quality criteria selected as most important by respondents ($N=114$, multi-select). This ordering informed the literature-derived ANP weighting in Section III-D.}
+\label{fig:importance}
+\end{figure}
+
+\subsection{Descriptive Statistics: Controlled Three-Tier Ratings}
+Table~\ref{tab:descriptives} reports mean ratings and standard deviations (1--5 scale, $N=114$ except Reasoning Quality and the ANP Composite, $N=113$) for each criterion and the ANP-weighted composite score, broken down by prompt-length condition. All figures were independently recomputed from the raw respondent-level data.
+
+\begin{table*}[htbp]
+\caption{Mean (SD) Ratings by Criterion and Prompt-Length Condition}
+\label{tab:descriptives}
+\centering
+\small
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Criterion} & \textbf{Short} & \textbf{Medium} & \textbf{Long} & $\boldsymbol{\chi^2}$ & \textbf{p} \\
+\midrule
+Accuracy & 3.32 (0.88) & 3.29 (0.99) & 3.51 (1.00) & 12.173 & .0023 \\
+Relevance & 3.42 (1.01) & 3.42 (1.02) & 3.42 (1.09) & 0.008 & .9959 \\
+Completeness & 3.27 (0.98) & 3.37 (1.02) & 3.55 (0.96) & 12.354 & .0021 \\
+Clarity & 3.27 (0.95) & 3.42 (0.98) & 3.64 (0.96) & 18.034 & $<$.0001 \\
+Reasoning & 3.21 (0.95) & 3.28 (0.96) & 3.52 (1.07) & 15.358 & .0005 \\
+ANP Composite & 3.32 & 3.37 & 3.54 & 11.203 & .0037 \\
+\bottomrule
+\end{tabular}
+\\[4pt]
+\footnotesize{Note: ANP Composite uses literature-derived weights (Section V-B) and complete-case data ($N=113$).}
+\end{table*}
+
+Three patterns are evident. First, the ANP composite score rises monotonically from Short (3.32) to Medium (3.37) to Long (3.54), consistent with the general finding in the reviewed literature that additional context improves perceived quality. Second, the improvement is not uniform across criteria: Clarity shows the largest gain from Short to Long (3.27 $\rightarrow$ 3.64, $\Delta=0.37$), followed by Reasoning Quality (3.21 $\rightarrow$ 3.52, $\Delta=0.31$) and Completeness (3.27 $\rightarrow$ 3.55, $\Delta=0.28$), while Relevance remains essentially flat (3.42 in all three conditions). Third, whether these differences are statistically significant requires the inferential tests reported in Section IV-C.
+
+\begin{figure*}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/fig1_grouped_bar.pdf}
+\caption{Mean ratings ($\pm$ SD) by criterion and prompt-length condition. Relevance remains flat across conditions while Clarity, Reasoning, Completeness, and Accuracy rise with prompt length.}
+\label{fig:groupedbar}
+\end{figure*}
+
+\subsection{Inferential Statistics: Friedman Tests and Wilcoxon Post-Hoc Comparisons}
+
+\subsubsection{Friedman Tests}
+Friedman tests (non-parametric repeated-measures, $k=3$ conditions) were conducted for each criterion and the ANP composite:
+\begin{itemize}
+\item Accuracy: $\chi^2_F(2)=12.17$, $p=.002$, $W=.053$ (small effect).
+\item Relevance: $\chi^2_F(2)=0.008$, $p=.996$, $W\approx.000$ --- not significant.
+\item Completeness: $\chi^2_F(2)=12.35$, $p=.002$, $W=.054$ (small effect).
+\item Clarity: $\chi^2_F(2)=18.03$, $p<.001$, $W=.079$ (small-to-moderate effect).
+\item Reasoning Quality: $\chi^2_F(2)=15.36$, $p<.001$, $W=.068$ (small effect); $n=113$.
+\item ANP Composite: $\chi^2_F(2)=11.20$, $p=.004$, $W=.050$ (small effect); $n=113$.
+\end{itemize}
+
+The Friedman test for Relevance is clearly non-significant ($p=.996$), indicating no detectable prompt-length effect on topical relevance. All other criteria and the composite score show statistically significant differences across conditions (all $p \leq .004$).
+
+\subsubsection{Wilcoxon Signed-Rank Post-Hoc Tests}
+For each significant Friedman result, pairwise Wilcoxon signed-rank tests were conducted with Bonferroni correction (adjusted $\alpha=.0167$ for three comparisons per criterion). Results are reported in Table~\ref{tab:wilcoxon}.
+
+\begin{table}[htbp]
+\caption{Wilcoxon Signed-Rank Post-Hoc Comparisons (Bonferroni-Corrected)}
+\label{tab:wilcoxon}
+\centering
+\begin{tabular}{llccc}
+\toprule
+\textbf{Criterion} & \textbf{Comp.} & \textbf{W} & \textbf{p} & \textbf{r} \\
+\midrule
+\multirow{3}{*}{Accuracy} & S vs M & 597.0 & .8677 & 0.016 \\
+ & S vs L & 441.0 & .0049** & 0.264 \\
+ & M vs L & 307.0 & .0066** & 0.254 \\
+\midrule
+\multirow{3}{*}{Relevance} & S vs M & 733.0 & .9315 & 0.008 \\
+ & S vs L & 903.0 & .9237 & 0.009 \\
+ & M vs L & 656.0 & .9446 & 0.007 \\
+\midrule
+\multirow{3}{*}{Completeness} & S vs M & 610.0 & .2206 & 0.115 \\
+ & S vs L & 668.0 & .0028** & 0.280 \\
+ & M vs L & 331.5 & .0240$^\dagger$ & 0.211 \\
+\midrule
+\multirow{3}{*}{Clarity} & S vs M & 454.0 & .0525 & 0.182 \\
+ & S vs L & 378.0 & $<$.0001** & 0.387 \\
+ & M vs L & 421.5 & .0087** & 0.246 \\
+\midrule
+\multirow{3}{*}{Reasoning} & S vs M & 539.5 & .4404 & 0.073 \\
+ & S vs L & 427.0 & .0013** & 0.301 \\
+ & M vs L & 218.5 & .0004** & 0.330 \\
+\bottomrule
+\end{tabular}
+\\[4pt]
+\footnotesize{** $p<.0167$ (significant after Bonferroni correction). $^\dagger$ Reached uncorrected significance ($p=.024$) but not corrected significance. $r=$ rank-biserial correlation ($r=|Z|/\sqrt{N}$). S = Short, M = Medium, L = Long.}
+\end{table}
+
+The post-hoc pattern is consistent across criteria. For all criteria that showed a significant Friedman test, the Long prompt condition differed significantly from the Short condition (all $p \leq .005$, Bonferroni-corrected). The Medium prompt condition differed significantly from the Short condition for none of the five criteria after correction. In other words, the clearest and most consistent effect is a Short-to-Long improvement; Short-to-Medium differences are not statistically significant for any criterion, and Medium-to-Long differences reach significance for Accuracy ($p=.007$), Clarity ($p=.009$), and Reasoning Quality ($p<.001$), but not Completeness after correction.
+
+Relevance shows no significant difference across any pair of conditions, confirming that prompt length in this range and task context did not affect topical relevance. Pairwise rank-biserial effect sizes ($r$) for the significant comparisons ranged from $r=0.25$ (Accuracy, Medium vs Long) to $r=0.39$ (Clarity, Short vs Long), indicating small-to-moderate effects, consistent with the small Kendall's $W$ values (0.05--0.08) reported at the omnibus Friedman-test level.
+
+% ============================================================
+% [SECTION 5: ER FRAMEWORK]
+% ============================================================
+\section{Proposed Evidential Reasoning Evaluation Framework}
+
+\subsection{Rationale}
+The descriptive means and inferential tests reported in Section IV establish the direction and statistical significance of prompt-length effects. However, they still mask two important sources of uncertainty: (a) individual raters disagree with one another, and a simple mean discards information about how much agreement underlies it; and (b) the five criteria are not equally important to overall quality, nor are they independent. A defensible evaluation framework should weight criteria according to their relative importance and interdependence, and should represent each rater's judgment as a distribution of belief rather than collapsing it immediately into a single number.
+
+\subsection{Evaluation Hierarchy: From Goal to Measurable Indicators}
+Before deriving criteria weights or combining evidence, it is useful to make the full evaluation hierarchy explicit. Table~\ref{tab:hierarchy} decomposes the overall evaluation goal into four levels: the top-level goal, the five main quality criteria (the ANP nodes used for weighting), criterion-specific sub-criteria describing what each main criterion means in measurable terms, and sub-sub-criteria describing the concrete, observable indicators raters implicitly relied on when forming judgments. This hierarchy underlies all three components of the framework: ANP is used to weight Level 2 against Level 1 (Step 1, below); BRB (belief rule base) is used to convert qualitative rater judgments at Levels 3--4 (e.g., ``mostly correct'') into structured belief distributions (Step 2); and evidential reasoning (ER) combines these distributions across raters and criteria into the single composite score (Steps 3--4).
+
+\begin{table*}[htbp]
+\caption{Four-Level Evaluation Hierarchy: Goal, Main Criteria, Sub-Criteria, and Sub-Sub-Criteria}
+\label{tab:hierarchy}
+\centering
+\small
+\begin{tabular}{p{1.6cm}p{3.0cm}p{3.0cm}p{3.0cm}p{3.0cm}p{3.0cm}}
+\toprule
+\textbf{Level} & \textbf{Accuracy} & \textbf{Relevance} & \textbf{Clarity} & \textbf{Completeness} & \textbf{Coherence} \\
+\midrule
+\textbf{Level 1: Goal} & \multicolumn{5}{c}{Evaluate the impact of prompt length on Large Language Model response quality} \\
+\midrule
+\textbf{Level 2: Main Criteria} (ANP nodes) & Factually correct information & Relevance of response to the prompt & Evenness and clarity of explanation & Completeness of ideas covered & Structural coherence of explanation \\
+\midrule
+\multirow{2}{1.6cm}{\textbf{Level 3: Sub-Criteria}} & Factual correctness & Correctness of explanation & Identification of all relevant points & Logical flow of ideas & Structured explanation \\
+ & Correct explanation of concepts & Correct explanation of concepts & Original/clear articulation of points & Logical completion of ideas & Structured committee/overall analysis \\
+\midrule
+\multirow{3}{1.6cm}{\textbf{Level 4: Sub-Sub-Criteria} (Indicators)} & All statements factually correct & Consistent with known knowledge & Correct flow and clarity of ideas & Consistent with known knowledge & Consistent with previous flow \\
+ & Consistent with known knowledge & Consistent with on-topic indicators & Consistent with known knowledge & Consistent with logical flow & Identified explanation results \\
+ & Consistent with known knowledge & --- & --- & Consistent with mean explanations & --- \\
+\bottomrule
+\end{tabular}
+\\[4pt]
+\footnotesize{Note: Level 2 corresponds to the five ANP main criteria used for the weighting in Step 1 below (Coherence is treated as a cross-cutting structural dimension related to, but distinct from, the Reasoning Quality criterion rated by survey respondents). Levels 3--4 specify the measurable sub-components and observable indicators that inform belief-distribution construction (Step 2) and evidence combination (Steps 3--4).}
+\end{table*}
+
+\subsection{Step 1 --- ANP-Based Criteria Weighting}
+\textit{Weighting source (clarification):} The weights used in this study are literature-informed and analytically constructed, not elicited from survey respondents. Following the ANP methodology \cite{saaty2001}, the five criteria are treated as a network rather than a flat list. Pairwise comparisons were informed by (a) the importance-frequency ordering from Section IV-A (Accuracy $>$ Relevance $>$ Clarity $>$ Completeness, with Reasoning Quality as a cross-cutting criterion), and (b) convergent evidence from \cite{liu2025} and \cite{balaji2024}. The resulting normalised weight vector is: Accuracy $=0.28$, Relevance $=0.22$, Clarity $=0.20$, Reasoning Quality $=0.18$, Completeness $=0.12$.
+
+\subsection{Step 2 --- Representing Ratings as Belief Distributions}
+Rather than treating each 1--5 rating as a precise value, each rater's score can be represented as a basic probability assignment (BPA) over the five scale points, reflecting underlying uncertainty. A rater's stated score is treated as a degree of belief concentrated mostly on the stated value, with residual belief mass distributed to adjacent scale points to reflect the self-reported judgment variability captured in Section IV-A (where most raters acknowledged that their judgments vary ``somewhat'' or ``a lot''). This converts a deterministic 1--5 score into a richer object combinable with Dempster--Shafer rules.
+
+\subsection{Step 3 --- Combining Evidence Across Raters}
+For each criterion within each prompt-length condition, individual belief distributions can be combined using Dempster's rule of combination (or an evidential-reasoning analogue reducing sensitivity to highly conflicting evidence). The result is a single aggregated belief distribution over the 1--5 scale for that criterion and condition, together with a residual uncertainty mass reflecting the degree of rater disagreement. This residual uncertainty is invisible in a simple mean but is informative about evaluator consensus.
+
+\subsection{Step 4 --- Aggregating Across Criteria}
+The five per-criterion aggregated belief distributions can be combined, weighted by the ANP-derived criteria weights from Step 1, using the evidential reasoning algorithm to produce a single overall belief distribution per prompt-length condition. As a crisp summary, applying the ANP weights to the descriptive means in Table~\ref{tab:descriptives} (complete-case, $N=113$) produces weighted composite scores of 3.32 (Short), 3.37 (Medium), and 3.54 (Long)---consistent with the unweighted means (Section IV-B) and with the Friedman test finding that conditions differ significantly ($p=.004$).
+
+\subsection{Sensitivity Analysis: ANP vs.\ Equal Weights}
+To assess whether the composite score ordering depends on the chosen weighting scheme, we compared the ANP-weighted composite against an equal-weighted composite (each criterion weighted 0.20), using complete-case data ($N=113$). Table~\ref{tab:sensitivity} presents the results.
+
+\begin{table}[htbp]
+\caption{Sensitivity Analysis: ANP vs.\ Equal Weighting}
+\label{tab:sensitivity}
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Weighting Scheme} & \textbf{Short} & \textbf{Medium} & \textbf{Long} \\
+\midrule
+ANP weights & 3.319 & 3.365 & 3.538 \\
+Equal weights & 3.312 & 3.368 & 3.543 \\
+\bottomrule
+\end{tabular}
+\\[4pt]
+\footnotesize{Note: ANP weights $=$ Acc .28, Rel .22, Cla .20, Rea .18, Com .12. Complete-case data, $N=113$. Both schemes produce the identical Short $<$ Medium $<$ Long ordering.}
+\end{table}
+
+The Short $<$ Medium $<$ Long ordering is identical under both schemes, and the composite scores differ by at most 0.007 across conditions. The qualitative conclusion is thus robust to the choice of weighting scheme within this dataset.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\columnwidth]{figures/fig2_composite_trend.pdf}
+\caption{ANP-weighted composite quality score across prompt-length conditions, showing a monotonic Short $<$ Medium $<$ Long trend (complete-case, $N=113$).}
+\label{fig:compositetrend}
+\end{figure}
+
+\subsection{Summary of the Framework's Contribution}
+The ER-based framework provides three things that simple mean comparison and even Friedman tests alone cannot: (1) an explicit, defensible weighting of criteria grounded in ANP rather than an implicit assumption of equal importance; (2) an explicit representation of rater disagreement and confidence, surfaced as residual uncertainty; and (3) a principled mechanism for combining evidence across both raters and criteria simultaneously. The statistical tests in Section IV-C establish significance; the ER framework establishes a methodologically transparent aggregation mechanism for future work involving larger samples and expert-elicited weights.
+
+% ============================================================
+% [SECTION 6: DISCUSSION]
+% ============================================================
+\section{Discussion}
+The pattern observed in Section IV---quality rising with prompt length, but unevenly across criteria, with Relevance flat and Clarity and Reasoning Quality showing the largest gains---is broadly consistent with \cite{liu2025} and \cite{balaji2024}, both of which found that longer, more detailed prompts improved performance, particularly when additional length supplied task-relevant structure. The near-absence of a Short-to-Medium effect (not significant for any criterion after correction) is notable: within the range tested, incremental lengthening from short to medium produced little measurable benefit, whereas the step from medium to long---which added explicit multi-factor analytical structure---produced the clearest gains in Clarity and Reasoning Quality.
+
+The flat Relevance score ($p=.996$) is among the more practically important findings: within this task and length range, additional prompt length did not help or harm topical adherence. This qualifies a simple ``longer is better'' narrative and is consistent with the long-context literature's finding that attention dilution, rather than relevance degradation, is the dominant failure mode at greater lengths \cite{levy2024}.
+
+Effect sizes were small at the omnibus level (Kendall's $W=0.05$--$0.08$) and small-to-moderate for the significant pairwise comparisons (rank-biserial $r=0.25$--$0.39$). These magnitudes should be interpreted in the context of the study's within-subjects design on a single task: the pilot is adequately powered to detect the presence of an effect and to establish the feasibility of the ANP/ER framework, but the numerical estimates of effect size cannot be extrapolated to different task types, models, or populations.
+
+\subsection{Limitations}
+\begin{itemize}
+\item \textbf{Single-task design (primary limitation):} The controlled rating exercise used a single task type (a World Cup prediction question---speculative, opinion-based, and sports-specific) and a single set of AI-generated responses. Whether the observed effects generalise to different task types, domains, models, or substantially longer prompt ranges is entirely unknown. Single-task pilot findings should not be presented as evidence of general prompt-length effects.
+\item \textbf{Sample composition (primary limitation):} The respondent pool is heavily weighted toward undergraduate students (89\%) from a single institution, which may not represent the evaluation judgments of domain experts, professional LLM users, or the broader adult population.
+\item \textbf{ANP weights not respondent-elicited:} The ANP pairwise comparison weights are literature-informed and analytically constructed, not derived from a formal pairwise-comparison survey instrument.
+\item \textbf{Narrow prompt-length range:} The three conditions span a relatively narrow range (one sentence to one short paragraph). Effects at much greater lengths may differ substantially.
+\item \textbf{BRB/ER framework partially illustrative:} The Belief Rule Base and Evidential Reasoning aggregation is described as a methodological proposal and illustrated with the descriptive data; a full numerical implementation with per-respondent BPAs has not been applied in this version.
+\end{itemize}
+
+% ============================================================
+% [SECTION 7: CONCLUSION]
+% ============================================================
+\section{Conclusion and Future Work}
+This pilot study examined the effect of prompt length on perceived AI response quality through a within-subjects design ($N=114$, predominantly undergraduate students) and a single FIFA World Cup prediction task rated across five quality criteria. Friedman tests confirmed statistically significant differences across prompt-length conditions for Accuracy, Completeness, Clarity, Reasoning Quality, and the ANP-weighted composite (all $p \leq .004$), while Relevance showed no significant effect ($p=.996$). Wilcoxon post-hoc tests with Bonferroni correction identified the Long-vs.-Short comparison as the most consistent source of difference; no Short-vs.-Medium comparison reached significance for any criterion. A sensitivity analysis confirmed that the composite ordering (Short $<$ Medium $<$ Long) is preserved under both ANP and equal weighting schemes.
+
+These results provide preliminary, within-sample evidence that prompt length matters for perceived response quality---specifically for depth-related criteria (Clarity, Reasoning, Completeness) rather than topical relevance---and demonstrate the feasibility of integrating ANP and Evidential Reasoning methods with formal inferential testing in LLM evaluation research. They should not be generalised beyond this single task and sample without replication.
+
+\subsection*{Future Work}
+The most important next steps are: (1) multi-task replication across at least four to six task types to estimate task $\times$ prompt-length interaction effects; (2) expert-elicited ANP weights via a formal pairwise-comparison instrument with documented consistency ratios; (3) broader and more diverse samples including professional and expert users; (4) a full ER numerical implementation with per-respondent BPAs combined via Dempster's rule; and (5) an extended prompt-length range approaching the context windows of contemporary models, to connect these findings with the long-context degradation literature.
+
+% ============================================================
+% [SECTION: REFERENCES]
+% Compiled with the .bib file below, OR paste the \bibitem block
+% manually if not using BibTeX. Both options given.
+% ============================================================
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+% ============================================================
+% [APPENDIX A: STATISTICAL DETAILS]
+% ============================================================
+\appendices
+\section{Statistical Analysis Details}
+All analyses were conducted in Python 3 using \texttt{scipy.stats}. The raw per-respondent rating data (114 respondents $\times$ 3 conditions $\times$ 5 criteria) is available in the accompanying spreadsheet. One respondent did not provide a Medium-condition Reasoning Quality rating; this respondent is excluded from the Reasoning Quality criterion analysis and from all composite-score calculations ($N=113$ in both cases) and included in all other analyses ($N=114$).
+
+Friedman test statistic: $\chi^2_F = \left[\frac{12k}{N \cdot k(k+1)}\right] \cdot \left[\sum\sum R_{ij}^2\right] - 3N(k+1)$, where $N$ = number of subjects and $k$ = number of conditions. Kendall's $W = \chi^2_F / [N(k-1)]$. Wilcoxon effect size: $r = |Z|/\sqrt{N}$, where $Z$ is derived from the normal approximation to the Wilcoxon $W$ distribution. The Bonferroni-corrected significance threshold for three pairwise comparisons per criterion is $\alpha_{adj} = .05/3 = .0167$. All reported $p$-values are two-tailed.
+
+\section{Survey Instrument Summary}
+The full 38-item survey instrument covered: respondent role and AI experience; typical prompt habits and beliefs about prompt length; a controlled three-tier (short/medium/long) rating exercise on a FIFA World Cup prediction task scored on Accuracy, Relevance, Completeness, Clarity, and Reasoning Quality (1--5 scale); task types for which AI tools are used; views on task-dependent ideal prompt length; use of context/background in prompts; self-rated evaluation confidence and consistency; familiarity with uncertainty-based evaluation methods; and open-ended comments. Raw response data ($N=114$) is available in the accompanying spreadsheet.
+
+\end{document}

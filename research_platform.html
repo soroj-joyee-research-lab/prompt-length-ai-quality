@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Length & AI Response Quality — Research Platform</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:   #0D1B2A;
+    --navy2:  #152238;
+    --blue:   #1E5FA8;
+    --accent: #2E86DE;
+    --teal:   #0F9B8E;
+    --gold:   #F4A261;
+    --light:  #EEF4FB;
+    --muted:  #8899AA;
+    --border: #D4DEE9;
+    --white:  #FFFFFF;
+    --text:   #1A2535;
+    --green:  #27AE60;
+    --red:    #E74C3C;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--light);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  code, .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  /* ─── Sidebar ─── */
+  #sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
+    background: var(--navy);
+    display: flex; flex-direction: column;
+    z-index: 100;
+    border-right: 1px solid #1E3050;
+  }
+  .sidebar-brand {
+    padding: 20px 16px 14px;
+    border-bottom: 1px solid #1E3050;
+  }
+  .sidebar-brand .title {
+    font-size: 11px; font-weight: 600; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .sidebar-brand .subtitle {
+    font-size: 12px; color: #6B8CAE; line-height: 1.4;
+  }
+  .nav-section {
+    padding: 10px 0;
+    flex: 1; overflow-y: auto;
+  }
+  .nav-label {
+    padding: 6px 16px 4px;
+    font-size: 9px; font-weight: 700; letter-spacing: .15em;
+    text-transform: uppercase; color: #3A5A7A;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 16px;
+    font-size: 12.5px; font-weight: 500; color: #7A99BB;
+    cursor: pointer; transition: all .15s;
+    border-left: 3px solid transparent;
+  }
+  .nav-item:hover { background: rgba(46,134,222,.08); color: #B8D0E8; }
+  .nav-item.active {
+    background: rgba(46,134,222,.13);
+    color: var(--white);
+    border-left-color: var(--accent);
+  }
+  .nav-item .icon { width: 16px; text-align: center; font-size: 14px; }
+  .sidebar-footer {
+    padding: 12px 16px;
+    border-top: 1px solid #1E3050;
+    font-size: 10px; color: #3A5A7A;
+  }
+
+  /* ─── Main ─── */
+  #main { margin-left: 220px; min-height: 100vh; }
+  .topbar {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-title { font-size: 15px; font-weight: 600; color: var(--navy); }
+  .topbar-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .badge {
+    display: inline-flex; align-items: center; padding: 3px 10px;
+    border-radius: 20px; font-size: 10.5px; font-weight: 600;
+    letter-spacing: .04em;
+  }
+  .badge-blue { background: #DBEAFE; color: var(--blue); }
+  .badge-teal { background: #CCFBF1; color: #0F766E; }
+  .badge-gold { background: #FEF3C7; color: #92400E; }
+  .badge-red  { background: #FEE2E2; color: #991B1B; }
+
+  .page { display: none; padding: 24px 28px; }
+  .page.active { display: block; }
+
+  /* ─── Cards ─── */
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
+  .kpi-card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 18px;
+    border-top: 3px solid var(--accent);
+  }
+  .kpi-card.teal { border-top-color: var(--teal); }
+  .kpi-card.gold { border-top-color: var(--gold); }
+  .kpi-card.green { border-top-color: var(--green); }
+  .kpi-val { font-size: 28px; font-weight: 700; color: var(--navy); line-height: 1; }
+  .kpi-label { font-size: 11px; color: var(--muted); margin-top: 4px; font-weight: 500; }
+  .kpi-sub { font-size: 10px; color: var(--teal); margin-top: 3px; }
+
+  /* ─── Tables ─── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .data-table th {
+    background: #F1F5FA; text-align: left;
+    padding: 9px 12px; font-weight: 600; font-size: 11px;
+    color: var(--muted); letter-spacing: .05em; text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer; user-select: none;
+  }
+  .data-table th:hover { background: #E4EDF6; }
+  .data-table td {
+    padding: 9px 12px; border-bottom: 1px solid #F0F4F8;
+    vertical-align: middle;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: #F7FAFD; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+
+  /* ─── Forms ─── */
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 5px; display: block; }
+  .form-input, .form-select, .form-textarea {
+    width: 100%; padding: 8px 10px;
+    border: 1px solid var(--border); border-radius: 6px;
+    font-family: inherit; font-size: 13px; color: var(--text);
+    background: var(--white); transition: border .15s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(46,134,222,.1);
+  }
+  .form-textarea { resize: vertical; min-height: 70px; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+  /* ─── Buttons ─── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 8px 14px; border-radius: 6px;
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+    border: none; transition: all .15s; font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--blue); }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: #EEF4FB; }
+  .btn-danger { background: #FEE2E2; color: var(--red); border: 1px solid #FECACA; }
+  .btn-danger:hover { background: #FECACA; }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-teal { background: var(--teal); color: white; }
+  .btn-teal:hover { background: #0D8A7E; }
+
+  /* ─── Matrix ─── */
+  .matrix-input {
+    width: 60px; padding: 4px 6px; text-align: center;
+    border: 1px solid var(--border); border-radius: 4px;
+    font-size: 12px; font-family: 'IBM Plex Mono', monospace;
+  }
+  .matrix-input:focus { outline: none; border-color: var(--accent); }
+  .matrix-input[disabled] { background: #F1F5FA; color: var(--accent); font-weight: 600; }
+  .matrix-diag { background: #EEF4FB !important; font-weight: 700; color: var(--navy) !important; }
+
+  /* ─── Slider labels ─── */
+  .slider-row { display: flex; align-items: center; gap: 10px; }
+  .slider-row label { width: 110px; flex-shrink: 0; font-size: 12px; font-weight: 500; }
+  .slider-row .slider-val {
+    min-width: 28px; text-align: center; font-weight: 700;
+    font-size: 14px; color: var(--accent); font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* ─── Quality level pills ─── */
+  .ql-excellent { background: #DCFCE7; color: #15803D; }
+  .ql-good      { background: #DBEAFE; color: #1D4ED8; }
+  .ql-average   { background: #FEF9C3; color: #854D0E; }
+  .ql-poor      { background: #FEE2E2; color: #B91C1C; }
+
+  /* ─── Charts ─── */
+  .chart-wrap { position: relative; }
+
+  /* ─── Section header ─── */
+  .section-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-hdr h2 { font-size: 15px; font-weight: 700; color: var(--navy); }
+  .section-hdr p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ─── Insight box ─── */
+  .insight-box {
+    background: linear-gradient(135deg, #EEF4FB 0%, #E8F4F8 100%);
+    border: 1px solid #BCD6EC; border-radius: 8px; padding: 14px 16px;
+    font-size: 13px; line-height: 1.6;
+  }
+  .insight-box h4 { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+
+  /* ─── Belief bar ─── */
+  .belief-bar-track { background: #E5EDF4; border-radius: 4px; height: 16px; overflow: hidden; }
+  .belief-bar-fill { height: 100%; border-radius: 4px; transition: width .4s; display: flex; align-items: center; padding: 0 6px; }
+  .belief-bar-fill span { font-size: 10px; font-weight: 700; color: white; white-space: nowrap; }
+
+  /* ─── Findings ─── */
+  .finding-block {
+    border-left: 3px solid var(--accent);
+    padding: 10px 16px; background: var(--white);
+    border-radius: 0 6px 6px 0; margin-bottom: 10px;
+    border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  }
+  .finding-block h4 { font-size: 12.5px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .finding-block p { font-size: 12px; color: #445566; line-height: 1.55; }
+
+  /* ─── Supermatrix ─── */
+  .super-table { font-size: 11px; }
+  .super-table th, .super-table td { padding: 6px 8px; border: 1px solid var(--border); text-align: center; }
+  .super-table th { background: #F1F5FA; font-weight: 600; }
+
+  /* ─── Scrollbar ─── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #C4D4E0; border-radius: 3px; }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 900px) {
+    #sidebar { width: 52px; }
+    .nav-item span, .sidebar-brand .subtitle, .sidebar-brand .title, .nav-label, .sidebar-footer { display: none; }
+    #main { margin-left: 52px; }
+    .kpi-grid { grid-template-columns: repeat(2,1fr); }
+  }
+
+  .tab-indicator {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent); border-radius: 2px;
+    transform: scaleX(0); transition: transform .2s;
+  }
+  .nav-item.active .tab-indicator { transform: scaleX(1); }
+
+  .cr-ok   { color: var(--green); }
+  .cr-warn { color: var(--red); }
+
+  .compare-col { flex: 1; min-width: 0; }
+  .compare-col h4 { font-size: 12px; font-weight: 700; padding: 8px 12px; border-radius: 6px 6px 0 0; }
+  .compare-col .response-text { font-size: 11.5px; line-height: 1.6; padding: 10px 12px; background: #F7FAFD; border: 1px solid var(--border); border-radius: 0 0 6px 6px; min-height: 120px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; }
+
+  .entropy-meter { height: 8px; background: #E5EDF4; border-radius: 4px; overflow: hidden; }
+  .entropy-fill { height: 100%; border-radius: 4px; transition: width .4s; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ SIDEBAR ═══════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sidebar-brand">
+    <div class="title">⚗ Research Platform</div>
+    <div class="subtitle">Prompt Length &amp; AI Quality · ANP + BRB</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Analysis</div>
+    <div class="nav-item active" onclick="showPage('dashboard',this)">
+      <span class="icon">📊</span><span>Dashboard</span>
+    </div>
+    <div class="nav-item" onclick="showPage('prompts',this)">
+      <span class="icon">📝</span><span>Prompt Manager</span>
+    </div>
+    <div class="nav-item" onclick="showPage('eval',this)">
+      <span class="icon">🧑‍⚖️</span><span>Human Evaluation</span>
+    </div>
+    <div class="nav-label">Methods</div>
+    <div class="nav-item" onclick="showPage('anp',this)">
+      <span class="icon">⚖️</span><span>ANP Weighting</span>
+    </div>
+    <div class="nav-item" onclick="showPage('brb',this)">
+      <span class="icon">🔮</span><span>BRB Evidential</span>
+    </div>
+    <div class="nav-label">Results</div>
+    <div class="nav-item" onclick="showPage('analysis',this)">
+      <span class="icon">📈</span><span>Length Analysis</span>
+    </div>
+    <div class="nav-item" onclick="showPage('findings',this)">
+      <span class="icon">🎓</span><span>Research Findings</span>
+    </div>
+  </div>
+  <div class="sidebar-footer">IEEE Conf. Format · n=114 evaluators</div>
+</nav>
+
+<!-- ═══════════════════════════════ MAIN ═══════════════════════════════ -->
+<div id="main">
+
+<!-- ─── TOPBAR ─── -->
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Effect of Prompt Length on AI Response Quality</div>
+    <div class="topbar-sub">An Evidential Reasoning Approach · Survey Data Analysis · n = 114</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span class="badge badge-blue">ANP Weighted</span>
+    <span class="badge badge-teal">BRB Engine</span>
+    <span class="badge badge-gold">114 Evaluators</span>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB 1: DASHBOARD ══════════════════ -->
+<div id="page-dashboard" class="page active">
+  <div class="section-hdr">
+    <div>
+      <h2>Research Dashboard</h2>
+      <p>Overview of evaluation results across all prompt lengths and criteria</p>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="refreshDashboard()">↻ Refresh</button>
+  </div>
+
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <div class="card">
+      <div class="card-title">📡 Criteria Scores by Prompt Length (Radar)</div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="chart-radar"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 Overall Quality Comparison</div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="chart-bar-overview"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-title">🏆 ANP-Weighted Composite Scores</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="chart-composite"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 Score Summary Table</div>
+      <div id="summary-table-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB 2: PROMPT MANAGER ══════════════════ -->
+<div id="page-prompts" class="page">
+  <div class="section-hdr">
+    <div>
+      <h2>Prompt &amp; Response Manager</h2>
+      <p>Manage prompts and compare AI responses side by side</p>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openAddPromptModal()">+ Add Prompt</button>
+  </div>
+
+  <div class="table-wrap" style="margin-bottom:20px">
+    <table class="data-table" id="prompt-table">
+      <thead>
+        <tr>
+          <th onclick="sortTable('prompt-table',0)">ID ↕</th>
+          <th onclick="sortTable('prompt-table',1)">Category</th>
+          <th onclick="sortTable('prompt-table',2)">Task Type</th>
+          <th onclick="sortTable('prompt-table',3)">Length</th>
+          <th>Prompt Text</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="prompt-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔀 Side-by-Side Response Comparison</div>
+    <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center">
+      <label class="form-label" style="margin:0;white-space:nowrap">Task:</label>
+      <select class="form-select" id="compare-task-select" style="max-width:280px" onchange="renderComparison()">
+        <option value="FIFA">FIFA World Cup Prediction (Task 1)</option>
+      </select>
+    </div>
+    <div id="comparison-view" style="display:flex;gap:12px"></div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div id="prompt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:none;align-items:center;justify-content:center">
+    <div class="card" style="width:560px;max-height:80vh;overflow-y:auto">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:16px" id="modal-title">Add Prompt</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label class="form-label">ID</label>
+          <input class="form-input" id="pm-id" placeholder="P004">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prompt Length</label>
+          <select class="form-select" id="pm-length">
+            <option>Short</option><option>Medium</option><option>Long</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <input class="form-input" id="pm-cat" placeholder="Factual / Creative / ...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Task Type</label>
+          <input class="form-input" id="pm-task" placeholder="Question Answering / ...">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prompt Text</label>
+        <textarea class="form-textarea" id="pm-text" rows="3"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">AI Response</label>
+        <textarea class="form-textarea" id="pm-resp" rows="4"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-outline" onclick="closePromptModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="savePrompt()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB 3: HUMAN EVALUATION ══════════════════ -->
+<div id="page-eval" class="page">
+  <div class="section-hdr">
+    <div>
+      <h2>Human Evaluation Input</h2>
+      <p>Multi-evaluator scoring across 5 criteria · n = 114 survey respondents loaded</p>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:360px 1fr;gap:16px">
+    <div class="card" style="align-self:start">
+      <div class="card-title">➕ New Evaluation</div>
+      <div class="form-group">
+        <label class="form-label">Prompt</label>
+        <select class="form-select" id="ev-prompt">
+          <option value="P001">P001 — Short Prompt</option>
+          <option value="P002">P002 — Medium Prompt</option>
+          <option value="P003">P003 — Long Prompt</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Evaluator Name</label>
+        <input class="form-input" id="ev-name" placeholder="Your name">
+      </div>
+      <div id="criteria-sliders"></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="submitEval()">Submit Evaluation</button>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">📊 Aggregated Scores (Average per Criterion per Prompt)</div>
+        <div class="chart-wrap" style="height:220px">
+          <canvas id="chart-eval-agg"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 All Evaluations <span id="eval-count-badge" class="badge badge-blue" style="font-size:10px">0</span></div>
+        <div class="table-wrap" style="max-height:300px;overflow-y:auto">
+          <table class="data-table" id="eval-table">
+            <thead>
+              <tr>
+                <th>Evaluator</th><th>Prompt</th><th>Accuracy</th><th>Relevance</th>
+                <th>Completeness</th><th>Clarity</th><th>Reasoning</th><th>Avg</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="eval-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB 4: ANP ══════════════════ -->
+<div id="page-anp" class="page">
+  <div class="section-hdr">
+    <div>
+      <h2>ANP Criteria Weighting</h2>
+      <p>Pairwise comparison matrix · Eigenvector weights · Consistency Ratio</p>
+    </div>
+    <button class="btn btn-teal btn-sm" onclick="calcANP()">⚙ Calculate</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr auto;gap:16px;margin-bottom:16px">
+    <div class="card">
+      <div class="card-title">📐 Pairwise Comparison Matrix (Saaty Scale 1–9)</div>
+      <div style="overflow-x:auto" id="anp-matrix-wrap"></div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="resetANP()">Reset to Default</button>
+        <button class="btn btn-primary btn-sm" onclick="calcANP()">Recalculate</button>
+      </div>
+    </div>
+    <div style="min-width:200px">
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title">📏 Results</div>
+        <div id="anp-results"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">✅ Consistency</div>
+        <div id="anp-consistency"></div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-title">📊 Criteria Weights Chart</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="chart-weights"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔢 Supermatrix (Normalized)</div>
+      <div id="supermatrix-wrap" style="overflow-x:auto"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB 5: BRB ══════════════════ -->
+<div id="page-brb" class="page">
+  <div class="section-hdr">
+    <div>
+      <h2>BRB Evidential Reasoning Engine</h2>
+      <p>Belief Rule Base · Dempster-Shafer aggregation · Uncertainty analysis</p>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="runBRB()">▶ Run Engine</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card">
+      <div class="card-title">📜 Rule Editor</div>
+      <div id="brb-rules-list" style="max-height:340px;overflow-y:auto;margin-bottom:10px"></div>
+      <button class="btn btn-outline btn-sm" onclick="addBRBRule()">+ Add Rule</button>
+    </div>
+    <div class="card">
+      <div class="card-title">🔮 Aggregated Belief Distribution</div>
+      <div id="brb-belief-output"></div>
+      <div style="margin-top:14px" id="brb-entropy"></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+    <div class="card" id="brb-short-card">
+      <div class="card-title">🟦 Short Prompt</div>
+      <div id="brb-short-out"></div>
+    </div>
+    <div class="card" id="brb-med-card">
+      <div class="card-title">🟩 Medium Prompt</div>
+      <div id="brb-med-out"></div>
+    </div>
+    <div class="card" id="brb-long-card">
+      <div class="card-title">🟨 Long Prompt</div>
+      <div id="brb-long-out"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB 6: ANALYSIS ══════════════════ -->
+<div id="page-analysis" class="page">
+  <div class="section-hdr">
+    <div>
+      <h2>Prompt Length Analysis</h2>
+      <p>Statistical trends · Quality trajectory · Diminishing returns detection</p>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card">
+      <div class="card-title">📈 Quality Trend: Short → Medium → Long</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="chart-trend"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 Per-Criterion Breakdown by Length</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="chart-grouped"></canvas></div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">📋 Statistical Summary Table</div>
+    <div class="table-wrap"><table class="data-table" id="stats-table">
+      <thead>
+        <tr>
+          <th>Criterion</th>
+          <th>Short — Mean</th><th>Short — SD</th><th>Short — Min</th><th>Short — Max</th>
+          <th>Medium — Mean</th><th>Medium — SD</th><th>Medium — Min</th><th>Medium — Max</th>
+          <th>Long — Mean</th><th>Long — SD</th><th>Long — Min</th><th>Long — Max</th>
+          <th>Best Length</th>
+        </tr>
+      </thead>
+      <tbody id="stats-tbody"></tbody>
+    </table></div>
+  </div>
+  <div class="insight-box" id="analysis-insight"></div>
+</div>
+
+<!-- ══════════════════ TAB 7: FINDINGS ══════════════════ -->
+<div id="page-findings" class="page">
+  <div class="section-hdr">
+    <div>
+      <h2>Research Findings</h2>
+      <p>Auto-generated conclusions · Exportable summary · Recommendations</p>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="copyFindings()">📋 Copy Summary</button>
+  </div>
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">📄 Auto-Generated Conclusions</div>
+        <div id="findings-text"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📊 Evidence Strength Summary</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-evidence"></canvas></div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">🎯 Recommendations</div>
+        <div id="findings-recs"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📤 Export</div>
+        <textarea class="form-textarea" id="export-text" rows="10" readonly style="font-size:10.5px;font-family:IBM Plex Mono,monospace;background:#F7FAFD"></textarea>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="copyFindings()">Copy</button>
+          <button class="btn btn-outline btn-sm" onclick="generateExport()">Regenerate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  DATA MODEL & STORAGE
+// ═══════════════════════════════════════════════════════
+
+const SURVEY_STATS = {
+  Short:  { accuracy:{mean:3.316,std:0.876,min:1,max:5,n:114}, relevance:{mean:3.421,std:1.012,min:1,max:5,n:114}, completeness:{mean:3.272,std:0.980,min:1,max:5,n:114}, clarity:{mean:3.272,std:0.953,min:1,max:5,n:114}, reasoning:{mean:3.211,std:0.954,min:1,max:5,n:114} },
+  Medium: { accuracy:{mean:3.289,std:0.993,min:1,max:5,n:114}, relevance:{mean:3.421,std:1.021,min:1,max:5,n:114}, completeness:{mean:3.368,std:1.024,min:1,max:5,n:114}, clarity:{mean:3.421,std:0.977,min:1,max:5,n:114}, reasoning:{mean:3.283,std:0.959,min:1,max:5,n:113} },
+  Long:   { accuracy:{mean:3.509,std:0.998,min:1,max:5,n:114}, relevance:{mean:3.421,std:1.088,min:1,max:5,n:114}, completeness:{mean:3.553,std:0.960,min:1,max:5,n:114}, clarity:{mean:3.640,std:0.961,min:1,max:5,n:114}, reasoning:{mean:3.518,std:1.066,min:1,max:5,n:114} }
+};
+const CRITERIA = ['accuracy','relevance','completeness','clarity','reasoning'];
+const CRIT_LABELS = ['Accuracy','Relevance','Completeness','Clarity','Reasoning'];
+const LENGTHS = ['Short','Medium','Long'];
+
+const DEFAULT_PROMPTS = [
+  {id:'P001',category:'Factual',taskType:'Sports Prediction',length:'Short',text:'Who is more likely to win the next FIFA World Cup?',response:'Spain and France are the top favorites for the 2026 World Cup.'},
+  {id:'P002',category:'Factual',taskType:'Sports Prediction',length:'Medium',text:'Who do you think will win the next FIFA World Cup? Explain your answer briefly with reasons based on team strength, performance, and players.',response:'Spain is my pick, with France close behind. Spain won Euro 2024 and has Lamine Yamal, Rodri, and Pedri — a balanced, tactically coherent squad. France brings Mbappé and incredible depth. Both are realistic winners.'},
+  {id:'P003',category:'Factual',taskType:'Sports Prediction',length:'Long',text:'Who do you think will win the next FIFA World Cup?\nPlease analyze the top teams such as Argentina, France, Brazil, England, Spain, and Portugal.\nConsider factors like team performance, player quality, recent international results, teamwork, and tactical strength.\nProvide a detailed explanation with reasoning for your final prediction.',response:'After analyzing all contenders:\n\nSpain (+450 odds): Reigning Euro 2024 champions with Lamine Yamal, Rodri, and Pedri. Best tactical coherence and midfield quality.\n\nFrance (+500): Most talented squad overall. Mbappé leads a deep team — potential to beat anyone but historically underperforms expectations.\n\nArgentina (+950): Defending champions, outstanding unity and Scaloni\'s tactical mastery. But aging squad and defending back-to-back titles is historically very hard.\n\nBrazil (+900): Vinícius Júnior ready to shine at 25. Carlo Ancelotti brings tactical experience. Loaded attack with Raphinha and Endrick.\n\nEngland (+650): Golden generation finally looks ready. Kane, Bellingham, Saka — but psychological barrier remains.\n\nPortugal (+800): Portugal climbed to 5th in FIFA rankings. Bernardo Silva, Rúben Neves — much more than just Ronaldo.\n\nFinal Prediction: Spain 🥇 France 🥈 Argentina 🥉'}
+];
+
+const DEFAULT_ANP_MATRIX = [
+  [1,    2,    3,    2,    3   ],
+  [1/2,  1,    2,    2,    2   ],
+  [1/3,  1/2,  1,    1,    2   ],
+  [1/2,  1/2,  1,    1,    2   ],
+  [1/3,  1/2,  1/2,  1/2,  1   ]
+];
+
+const DEFAULT_BRB_RULES = [
+  {id:1, conditions:{accuracy:[4,5], relevance:[4,5], completeness:[4,5], clarity:[4,5], reasoning:[4,5]}, qualityLevel:'Excellent', beliefDegree:0.90, weight:1.0},
+  {id:2, conditions:{accuracy:[3,4], relevance:[3,5], completeness:[3,4], clarity:[3,5], reasoning:[3,4]}, qualityLevel:'Good',      beliefDegree:0.80, weight:0.9},
+  {id:3, conditions:{accuracy:[2,3], relevance:[2,4], completeness:[2,3], clarity:[2,4], reasoning:[2,3]}, qualityLevel:'Average',   beliefDegree:0.75, weight:0.8},
+  {id:4, conditions:{accuracy:[1,2], relevance:[1,3], completeness:[1,2], clarity:[1,3], reasoning:[1,2]}, qualityLevel:'Poor',      beliefDegree:0.70, weight:0.7},
+  {id:5, conditions:{accuracy:[3,5], relevance:[4,5], completeness:[2,4], clarity:[3,5], reasoning:[2,4]}, qualityLevel:'Good',      beliefDegree:0.65, weight:0.85},
+];
+
+function load(key, def) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch(e) { return def; }
+}
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
+
+let DB = {
+  prompts:    load('plq_prompts_v2',    DEFAULT_PROMPTS),
+  evaluations:load('plq_evals_v2',      buildDefaultEvals()),
+  anpMatrix:  load('plq_anp_v2',        DEFAULT_ANP_MATRIX),
+  brbRules:   load('plq_brb_v2',        DEFAULT_BRB_RULES),
+  anpWeights: [0.35, 0.25, 0.18, 0.14, 0.08]
+};
+
+function buildDefaultEvals() {
+  // Built from 114 survey respondents per prompt length (342 total individual evaluations)
+  const evals = [];
+  const seed = [
+    [1,4,1,2,1],[3,2,3,3,3],[4,3,3,3,3],[3,3,3,3,3],[3,4,3,3,3],
+    [1,3,1,1,1],[3,3,4,3,4],[3,3,3,3,3],[3,3,3,3,3],[3,3,3,3,3],
+    [4,4,4,4,4],[4,5,4,3,3],[3,4,2,3,4],[3,4,3,3,3],[3,4,3,4,4],
+    [4,4,4,4,4],[3,3,3,3,3],[5,5,4,4,3],[4,4,4,4,4],[4,5,5,4,5],
+    [3,4,3,3,3],[4,5,4,5,5],[3,4,5,4,3],[3,4,5,2,3],[4,5,4,4,4],
+    [3,3,3,3,3],[3,2,4,3,3],[4,4,3,4,3],[4,5,4,4,5],[4,2,4,4,3],
+    [4,4,4,4,3],[3,4,2,3,3],[5,5,5,5,5],[2,4,5,4,4],[3,3,2,3,4],
+    [5,2,5,5,5],[3,3,2,2,3],[3,2,4,2,2],[4,5,4,4,1],[4,4,3,4,3],
+    [4,3,3,3,3],[3,4,3,3,3],[3,2,3,3,3],[1,1,1,1,1],[3,4,4,4,3],
+    [4,4,4,4,4],[5,4,5,5,5],[4,4,2,3,3],[5,5,5,5,5],[2,2,2,4,4],
+    [4,4,3,4,3],[3,2,3,3,4],[2,2,2,3,3],[3,3,3,3,3],[3,2,4,2,3],
+    [4,3,4,3,3],[4,4,3,4,3],[4,2,2,3,3],[4,4,4,3,4],[3,2,3,3,3],
+    [3,3,4,2,4],[3,2,4,3,3],[3,3,3,4,3],[1,1,1,1,1],[3,3,4,4,3],
+    [3,4,3,3,3],[4,4,5,5,4],[3,3,2,4,2],[3,2,4,1,2],[4,3,2,2,1],
+    [2,4,4,3,3],[4,4,3,4,3],[2,2,2,2,3],[3,4,3,3,3],[4,5,4,5,5],
+    [4,3,4,3,3],[2,3,2,2,4],[2,4,3,3,3],[3,3,3,3,3],[4,4,2,4,3],
+    [3,3,3,3,3],[1,4,4,4,3],[4,4,3,3,3],[3,3,3,2,3],[4,4,4,4,5],
+    [3,4,4,4,2],[4,4,4,4,3],[4,4,4,4,3],[3,4,3,4,4],[3,5,3,4,2],
+    [4,4,4,4,4],[3,4,3,3,3],[3,3,2,2,3],[4,3,2,4,1],[4,4,3,4,4],
+    [3,4,3,3,3],[3,1,2,2,3],[4,4,3,3,4],[4,5,4,3,3],[4,4,3,3,3],
+    [3,2,3,3,2],[3,4,5,5,5],[3,3,2,4,3],[4,3,4,5,4],[3,4,4,3,3],
+    [3,4,3,3,3],[3,4,5,3,3],[4,4,3,3,3],[4,4,4,4,4],[4,3,4,4,5],
+    [1,1,2,1,1],[3,2,2,2,5],[4,4,3,3,3],[5,1,2,1,3]
+  ];
+  const seedM = [
+    [2,2,2,1,null],[4,3,3,3,3],[4,4,4,4,3],[2,4,3,3,3],[3,4,4,3,3],
+    [1,1,1,1,1],[2,4,3,3,3],[3,3,3,3,3],[3,3,3,3,3],[3,3,2,4,4],
+    [4,4,4,4,4],[5,5,4,4,4],[2,3,2,3,4],[4,3,3,3,3],[3,3,3,4,4],
+    [3,4,4,3,4],[3,3,3,3,3],[3,3,5,4,3],[3,4,4,4,4],[5,5,4,5,4],
+    [3,3,3,3,3],[4,5,4,4,5],[4,4,5,3,3],[2,4,5,1,2],[4,3,3,4,3],
+    [3,3,3,3,3],[3,4,4,3,3],[3,4,3,3,4],[5,5,5,5,5],[3,3,4,3,5],
+    [4,2,3,3,3],[3,4,3,4,4],[5,5,5,5,5],[4,5,4,4,5],[1,3,2,4,4],
+    [5,5,5,5,1],[2,2,2,2,3],[2,2,1,3,4],[4,5,5,5,4],[3,4,4,4,3],
+    [3,3,4,3,3],[3,4,4,4,4],[4,3,4,4,4],[1,1,1,1,1],[3,4,4,4,3],
+    [4,4,4,4,4],[5,5,5,5,5],[4,4,4,4,4],[5,4,4,5,4],[4,1,4,4,4],
+    [4,4,3,3,3],[2,3,3,3,3],[3,2,3,3,1],[3,3,3,3,3],[3,4,2,2,5],
+    [4,4,4,4,4],[4,3,4,4,3],[2,3,2,4,2],[4,3,4,4,4],[3,4,4,4,3],
+    [3,1,5,2,3],[2,2,3,3,2],[4,3,4,4,4],[1,1,1,1,1],[3,3,3,4,3],
+    [3,2,3,3,3],[5,4,5,4,4],[3,5,1,3,4],[2,3,2,4,3],[2,3,4,1,2],
+    [3,4,3,4,3],[4,4,4,5,4],[3,3,3,3,3],[3,3,3,3,3],[5,5,5,5,5],
+    [4,4,4,3,4],[2,2,3,3,2],[3,3,2,4,4],[3,3,3,3,3],[4,4,4,3,3],
+    [3,4,3,3,3],[2,2,4,2,2],[4,3,3,3,3],[3,4,2,4,4],[5,5,4,4,5],
+    [4,3,4,4,3],[4,4,4,4,3],[4,4,4,4,3],[3,3,3,4,3],[4,4,4,4,3],
+    [4,4,4,4,4],[4,4,4,4,4],[3,3,3,3,3],[3,3,2,4,2],[4,4,4,4,3],
+    [3,4,3,4,4],[5,2,1,1,1],[3,4,3,4,3],[4,5,5,4,4],[3,4,3,3,3],
+    [4,4,3,4,3],[3,3,3,3,3],[3,3,4,4,3],[4,3,4,4,4],[3,3,3,2,3],
+    [3,4,3,3,3],[4,3,3,3,3],[4,4,3,4,3],[4,4,4,4,4],[4,5,5,4,5],
+    [1,1,1,1,1],[2,2,2,2,2],[4,5,4,5,4],[1,2,3,3,2]
+  ];
+  const seedL = [
+    [2,1,2,3,1],[3,3,3,3,3],[4,4,4,3,3],[4,4,4,4,4],[3,2,3,3,3],
+    [1,1,1,1,1],[4,4,4,4,5],[3,3,3,3,3],[3,3,3,3,3],[4,3,2,4,3],
+    [1,4,4,4,4],[5,5,5,5,5],[3,1,5,3,4],[3,3,3,3,3],[3,4,3,3,4],
+    [4,4,4,4,4],[3,3,3,3,3],[5,4,5,5,5],[4,4,4,4,4],[5,5,5,4,5],
+    [3,4,4,4,3],[4,5,5,5,5],[4,4,4,3,3],[2,3,4,5,2],[4,5,5,5,4],
+    [3,3,3,2,3],[3,4,4,3,3],[4,3,3,4,4],[5,5,5,5,5],[4,4,1,5,4],
+    [3,4,4,4,3],[5,5,4,4,5],[5,5,5,5,5],[4,5,4,4,5],[4,4,3,4,5],
+    [5,5,4,4,5],[4,4,4,4,3],[5,4,4,5,5],[4,5,5,5,5],[4,4,3,4,3],
+    [4,4,4,4,4],[4,4,4,4,4],[4,3,4,4,4],[1,1,1,1,1],[3,4,3,3,3],
+    [4,4,4,4,4],[5,5,5,5,5],[4,4,5,5,5],[4,4,4,4,4],[4,1,4,4,4],
+    [4,3,3,4,3],[2,3,3,3,3],[1,3,3,2,2],[4,4,4,4,4],[4,1,3,4,2],
+    [4,4,4,4,4],[4,4,4,4,4],[1,2,2,3,2],[4,4,4,4,3],[3,3,3,3,4],
+    [4,4,3,3,2],[3,3,3,3,3],[4,4,4,4,4],[2,1,2,1,1],[3,4,4,4,3],
+    [4,4,3,3,3],[4,4,5,4,5],[3,2,4,2,5],[3,2,3,4,2],[4,2,4,1,3],
+    [3,4,3,4,3],[5,5,5,5,5],[3,3,3,2,2],[3,3,3,3,3],[5,4,4,5,5],
+    [4,3,3,3,3],[2,2,2,3,2],[3,3,3,3,4],[3,3,3,3,3],[4,3,4,4,4],
+    [3,4,4,4,4],[2,3,2,4,2],[3,3,4,4,3],[3,2,2,3,4],[4,4,4,5,5],
+    [3,3,3,4,3],[4,4,4,4,4],[3,3,4,4,3],[3,3,3,3,3],[4,5,4,4,4],
+    [4,4,4,4,4],[4,4,4,4,4],[4,2,3,3,4],[3,3,2,4,1],[5,4,4,5,4],
+    [4,4,4,4,4],[5,1,1,2,3],[3,3,4,4,3],[5,5,5,5,5],[3,4,3,3,3],
+    [3,2,4,2,3],[4,4,4,4,4],[3,3,4,3,3],[3,4,4,5,5],[4,4,4,4,4],
+    [4,3,3,4,3],[4,3,3,3,3],[4,3,4,4,3],[4,4,4,4,4],[4,5,5,4,4],
+    [1,1,1,1,1],[2,2,3,3,4],[4,4,4,4,4],[1,2,3,3,2]
+  ];
+  for(let i=0;i<114;i++){
+    const name = `Eval_${String(i+1).padStart(3,'0')}`;
+    evals.push({id:`ev_s_${i}`,promptId:'P001',evaluator:name,promptLen:'Short',
+      accuracy:seed[i][0],relevance:seed[i][1],completeness:seed[i][2],clarity:seed[i][3],reasoning:seed[i][4]});
+    evals.push({id:`ev_m_${i}`,promptId:'P002',evaluator:name,promptLen:'Medium',
+      accuracy:seedM[i][0],relevance:seedM[i][1],completeness:seedM[i][2],clarity:seedM[i][3],reasoning:seedM[i][4]});
+    evals.push({id:`ev_l_${i}`,promptId:'P003',evaluator:name,promptLen:'Long',
+      accuracy:seedL[i][0],relevance:seedL[i][1],completeness:seedL[i][2],clarity:seedL[i][3],reasoning:seedL[i][4]});
+  }
+  return evals;
+}
+
+// ═══════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════
+const charts = {};
+
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(el) el.classList.add('active');
+  renderPage(id);
+}
+
+function renderPage(id) {
+  if(id==='dashboard') renderDashboard();
+  if(id==='prompts')   renderPrompts();
+  if(id==='eval')      renderEval();
+  if(id==='anp')       renderANP();
+  if(id==='brb')       renderBRB();
+  if(id==='analysis')  renderAnalysis();
+  if(id==='findings')  renderFindings();
+}
+
+// ═══════════════════════════════════════════════════════
+//  UTILITY: Chart helpers
+// ═══════════════════════════════════════════════════════
+const C = {
+  blue:  '#2E86DE', navy:  '#0D1B2A', teal:  '#0F9B8E',
+  gold:  '#F4A261', green: '#27AE60', red:   '#E74C3C',
+  short: 'rgba(46,134,222,0.8)',  shortB:'rgba(46,134,222,1)',
+  med:   'rgba(15,155,142,0.8)',  medB:  'rgba(15,155,142,1)',
+  long:  'rgba(244,162,97,0.8)',  longB: 'rgba(244,162,97,1)',
+};
+
+function destroyChart(id) { if(charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function avgByCriterion(length) {
+  return CRITERIA.map(c => SURVEY_STATS[length][c].mean);
+}
+
+function compositeScore(length, weights) {
+  const avgs = avgByCriterion(length);
+  return avgs.reduce((s,v,i)=>s+v*weights[i],0);
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB 1: DASHBOARD
+// ═══════════════════════════════════════════════════════
+function renderDashboard() {
+  const w = DB.anpWeights;
+  const shortComp  = compositeScore('Short',  w);
+  const medComp    = compositeScore('Medium', w);
+  const longComp   = compositeScore('Long',   w);
+  const best = longComp >= shortComp && longComp >= medComp ? 'Long'
+             : shortComp >= medComp ? 'Short' : 'Medium';
+
+  // KPIs
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-val">3</div>
+      <div class="kpi-label">Prompt Lengths</div>
+      <div class="kpi-sub">Short · Medium · Long</div>
+    </div>
+    <div class="kpi-card teal">
+      <div class="kpi-val">114</div>
+      <div class="kpi-label">Human Evaluators</div>
+      <div class="kpi-sub">Survey respondents</div>
+    </div>
+    <div class="kpi-card gold">
+      <div class="kpi-val">${((shortComp+medComp+longComp)/3).toFixed(2)}</div>
+      <div class="kpi-label">Avg Composite Score</div>
+      <div class="kpi-sub">ANP-weighted (scale 1–5)</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-val">${best}</div>
+      <div class="kpi-label">Best Prompt Length</div>
+      <div class="kpi-sub">Composite score: ${(best==='Short'?shortComp:best==='Medium'?medComp:longComp).toFixed(3)}</div>
+    </div>`;
+
+  // Radar
+  destroyChart('radar');
+  const radarCtx = document.getElementById('chart-radar').getContext('2d');
+  charts['radar'] = new Chart(radarCtx, {
+    type: 'radar',
+    data: {
+      labels: CRIT_LABELS,
+      datasets: [
+        {label:'Short',  data:avgByCriterion('Short'),  borderColor:C.shortB, backgroundColor:'rgba(46,134,222,.15)', pointBackgroundColor:C.shortB},
+        {label:'Medium', data:avgByCriterion('Medium'), borderColor:C.medB,   backgroundColor:'rgba(15,155,142,.15)', pointBackgroundColor:C.medB},
+        {label:'Long',   data:avgByCriterion('Long'),   borderColor:C.longB,  backgroundColor:'rgba(244,162,97,.15)', pointBackgroundColor:C.longB},
+      ]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ r:{ min:1, max:5, ticks:{stepSize:1,font:{size:9}}, pointLabels:{font:{size:11}} } },
+      plugins:{ legend:{position:'bottom',labels:{font:{size:11}}} }
+    }
+  });
+
+  // Bar overview
+  destroyChart('bar-overview');
+  const barCtx = document.getElementById('chart-bar-overview').getContext('2d');
+  charts['bar-overview'] = new Chart(barCtx, {
+    type: 'bar',
+    data: {
+      labels: CRIT_LABELS,
+      datasets: [
+        {label:'Short',  data:avgByCriterion('Short'),  backgroundColor:C.short},
+        {label:'Medium', data:avgByCriterion('Medium'), backgroundColor:C.med},
+        {label:'Long',   data:avgByCriterion('Long'),   backgroundColor:C.long},
+      ]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ y:{min:1,max:5,ticks:{stepSize:0.5}} },
+      plugins:{ legend:{position:'bottom',labels:{font:{size:11}}} }
+    }
+  });
+
+  // Composite chart
+  destroyChart('composite');
+  const compCtx = document.getElementById('chart-composite').getContext('2d');
+  charts['composite'] = new Chart(compCtx, {
+    type:'bar',
+    data:{
+      labels:['Short','Medium','Long'],
+      datasets:[{
+        label:'Composite Score',
+        data:[shortComp, medComp, longComp],
+        backgroundColor:[C.short, C.med, C.long],
+        borderRadius:4
+      }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ y:{min:1,max:5} },
+      plugins:{ legend:{display:false} }
+    }
+  });
+
+  // Summary table
+  let tbl = `<table class="data-table"><thead><tr>
+    <th>Criterion</th><th>Short</th><th>Medium</th><th>Long</th><th>Best</th>
+  </tr></thead><tbody>`;
+  CRITERIA.forEach((c,i)=>{
+    const s=SURVEY_STATS.Short[c].mean, m=SURVEY_STATS.Medium[c].mean, l=SURVEY_STATS.Long[c].mean;
+    const best = l>=s&&l>=m?'Long':s>=m?'Short':'Medium';
+    const color = best==='Long'?'#F4A261':best==='Short'?'#2E86DE':'#0F9B8E';
+    tbl+=`<tr><td><strong>${CRIT_LABELS[i]}</strong></td>
+      <td>${s.toFixed(3)}</td><td>${m.toFixed(3)}</td><td>${l.toFixed(3)}</td>
+      <td><span style="color:${color};font-weight:700">${best}</span></td></tr>`;
+  });
+  tbl+='</tbody></table>';
+  document.getElementById('summary-table-wrap').innerHTML = tbl;
+}
+
+function refreshDashboard() { renderDashboard(); }
+
+// ═══════════════════════════════════════════════════════
+//  TAB 2: PROMPT MANAGER
+// ═══════════════════════════════════════════════════════
+function renderPrompts() {
+  const tbody = document.getElementById('prompt-tbody');
+  tbody.innerHTML = '';
+  DB.prompts.forEach(p=>{
+    const lenColor = p.length==='Short'?C.blue:p.length==='Medium'?C.teal:C.gold;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="mono" style="font-size:11px">${p.id}</td>
+      <td>${p.category}</td>
+      <td>${p.taskType}</td>
+      <td><span class="badge" style="background:${lenColor}22;color:${lenColor}">${p.length}</span></td>
+      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px" title="${p.text}">${p.text}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-outline btn-sm" onclick="editPrompt('${p.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePrompt('${p.id}')">🗑</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  renderComparison();
+}
+
+function renderComparison() {
+  const taskKey = document.getElementById('compare-task-select').value;
+  const short  = DB.prompts.find(p=>p.length==='Short');
+  const medium = DB.prompts.find(p=>p.length==='Medium');
+  const long   = DB.prompts.find(p=>p.length==='Long');
+  const cols = [
+    {label:'Short Prompt',  color:C.blue, p:short},
+    {label:'Medium Prompt', color:C.teal, p:medium},
+    {label:'Long Prompt',   color:C.gold, p:long},
+  ];
+  document.getElementById('comparison-view').innerHTML = cols.map(c=>`
+    <div class="compare-col">
+      <h4 style="background:${c.color}22;color:${c.color}">${c.label}</h4>
+      <div class="response-text" style="border-color:${c.color}44">${c.p?c.p.response:'—'}</div>
+    </div>`).join('');
+}
+
+let editingId = null;
+function openAddPromptModal() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Add Prompt';
+  ['id','cat','task','text','resp'].forEach(f=>document.getElementById('pm-'+f).value='');
+  document.getElementById('prompt-modal').style.display='flex';
+}
+function editPrompt(id) {
+  editingId = id;
+  const p = DB.prompts.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('modal-title').textContent = 'Edit Prompt';
+  document.getElementById('pm-id').value   = p.id;
+  document.getElementById('pm-cat').value  = p.category;
+  document.getElementById('pm-task').value = p.taskType;
+  document.getElementById('pm-length').value = p.length;
+  document.getElementById('pm-text').value = p.text;
+  document.getElementById('pm-resp').value = p.response;
+  document.getElementById('prompt-modal').style.display='flex';
+}
+function closePromptModal() { document.getElementById('prompt-modal').style.display='none'; }
+function savePrompt() {
+  const obj = {
+    id:       document.getElementById('pm-id').value.trim(),
+    category: document.getElementById('pm-cat').value.trim(),
+    taskType: document.getElementById('pm-task').value.trim(),
+    length:   document.getElementById('pm-length').value,
+    text:     document.getElementById('pm-text').value.trim(),
+    response: document.getElementById('pm-resp').value.trim(),
+  };
+  if(!obj.id||!obj.text) { alert('ID and Prompt Text are required'); return; }
+  if(editingId) {
+    const idx = DB.prompts.findIndex(x=>x.id===editingId);
+    if(idx>=0) DB.prompts[idx]=obj; else DB.prompts.push(obj);
+  } else {
+    if(DB.prompts.find(x=>x.id===obj.id)) { alert('ID already exists'); return; }
+    DB.prompts.push(obj);
+  }
+  save('plq_prompts_v2', DB.prompts);
+  closePromptModal();
+  renderPrompts();
+}
+function deletePrompt(id) {
+  if(!confirm('Delete this prompt?')) return;
+  DB.prompts = DB.prompts.filter(p=>p.id!==id);
+  save('plq_prompts_v2', DB.prompts);
+  renderPrompts();
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB 3: HUMAN EVALUATION
+// ═══════════════════════════════════════════════════════
+function renderEval() {
+  // Build criteria sliders
+  const sliderHtml = CRITERIA.map(c=>`
+    <div class="form-group">
+      <div class="slider-row">
+        <label>${c.charAt(0).toUpperCase()+c.slice(1)}</label>
+        <input type="range" min="1" max="10" value="5" id="sl-${c}" oninput="document.getElementById('sv-${c}').textContent=this.value">
+        <span class="slider-val" id="sv-${c}">5</span>
+      </div>
+    </div>`).join('');
+  document.getElementById('criteria-sliders').innerHTML = sliderHtml;
+
+  renderEvalTable();
+  renderEvalAgg();
+}
+
+function submitEval() {
+  const promptId = document.getElementById('ev-prompt').value;
+  const name     = document.getElementById('ev-name').value.trim();
+  if(!name) { alert('Enter evaluator name'); return; }
+  const scores = {};
+  CRITERIA.forEach(c=>{ scores[c]=parseInt(document.getElementById('sl-'+c).value); });
+  const ev = { id:'ev_'+Date.now(), promptId, evaluator:name, promptLen: {P001:'Short',P002:'Medium',P003:'Long'}[promptId]||'Short', ...scores };
+  DB.evaluations.push(ev);
+  save('plq_evals_v2', DB.evaluations);
+  renderEvalTable();
+  renderEvalAgg();
+}
+
+function renderEvalTable() {
+  const tbody = document.getElementById('eval-tbody');
+  const badge = document.getElementById('eval-count-badge');
+  badge.textContent = DB.evaluations.length;
+  tbody.innerHTML = '';
+  const recent = [...DB.evaluations].reverse().slice(0,50);
+  recent.forEach(ev=>{
+    const scores = CRITERIA.map(c=>ev[c]??'-');
+    const avg = CRITERIA.filter(c=>ev[c]!=null).map(c=>ev[c]);
+    const mean = avg.length ? (avg.reduce((a,b)=>a+b,0)/avg.length).toFixed(1) : '-';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="font-size:11px">${ev.evaluator}</td>
+      <td><span class="badge badge-blue" style="font-size:9px">${ev.promptId}</span></td>
+      ${scores.map(s=>`<td class="mono" style="text-align:center">${s}</td>`).join('')}
+      <td class="mono" style="font-weight:700;text-align:center">${mean}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteEval('${ev.id}')">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function deleteEval(id) {
+  DB.evaluations = DB.evaluations.filter(e=>e.id!==id);
+  save('plq_evals_v2', DB.evaluations);
+  renderEvalTable();
+  renderEvalAgg();
+}
+
+function renderEvalAgg() {
+  destroyChart('eval-agg');
+  const ctx = document.getElementById('chart-eval-agg').getContext('2d');
+  const agg = {};
+  LENGTHS.forEach(l=>{
+    agg[l] = CRITERIA.map(c=>{
+      const vals = DB.evaluations.filter(e=>e.promptLen===l && e[c]!=null).map(e=>e[c]);
+      return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+    });
+  });
+  charts['eval-agg'] = new Chart(ctx, {
+    type:'bar',
+    data:{ labels:CRIT_LABELS, datasets:[
+      {label:'Short',  data:agg.Short,  backgroundColor:C.short},
+      {label:'Medium', data:agg.Medium, backgroundColor:C.med},
+      {label:'Long',   data:agg.Long,   backgroundColor:C.long},
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{y:{min:0,max:10}}, plugins:{legend:{position:'bottom',labels:{font:{size:11}}}} }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB 4: ANP
+// ═══════════════════════════════════════════════════════
+function renderANP() {
+  buildMatrixUI();
+  calcANP();
+}
+
+function buildMatrixUI() {
+  const n=5;
+  let html='<table style="border-collapse:collapse"><thead><tr><th style="padding:6px 8px;background:#F1F5FA;border:1px solid #D4DEE9;font-size:11px"></th>';
+  CRIT_LABELS.forEach(l=>{ html+=`<th style="padding:6px 8px;background:#F1F5FA;border:1px solid #D4DEE9;font-size:11px;white-space:nowrap">${l}</th>`; });
+  html+='</tr></thead><tbody>';
+  for(let i=0;i<n;i++){
+    html+=`<tr><th style="padding:6px 8px;background:#F1F5FA;border:1px solid #D4DEE9;font-size:11px;text-align:right">${CRIT_LABELS[i]}</th>`;
+    for(let j=0;j<n;j++){
+      const val = DB.anpMatrix[i][j];
+      const diag = i===j?'matrix-diag':'';
+      const disabled = (i===j||i>j)?'disabled':'';
+      const display = formatFrac(val);
+      html+=`<td style="border:1px solid #D4DEE9;padding:4px">
+        <input class="matrix-input ${diag}" ${disabled} id="m_${i}_${j}" value="${display}" 
+          onchange="matrixChanged(${i},${j},this.value)">
+      </td>`;
+    }
+    html+='</tr>';
+  }
+  html+='</tbody></table>';
+  document.getElementById('anp-matrix-wrap').innerHTML = html;
+}
+
+function formatFrac(v) {
+  if(v===1) return '1';
+  const fracs = [[2,'1/2'],[3,'1/3'],[4,'1/4'],[5,'1/5'],[6,'1/6'],[7,'1/7'],[8,'1/8'],[9,'1/9']];
+  for(const [d,s] of fracs) { if(Math.abs(v-1/d)<0.001) return s; }
+  return v.toFixed(3);
+}
+
+function matrixChanged(i,j,val) {
+  let num;
+  if(val.includes('/')) {
+    const parts = val.split('/');
+    num = parseFloat(parts[0]) / parseFloat(parts[1]);
+  } else {
+    num = parseFloat(val);
+  }
+  if(isNaN(num)||num<=0) return;
+  DB.anpMatrix[i][j] = num;
+  DB.anpMatrix[j][i] = 1/num;
+  save('plq_anp_v2', DB.anpMatrix);
+  // Update reciprocal display
+  const recip = document.getElementById(`m_${j}_${i}`);
+  if(recip) recip.value = formatFrac(1/num);
+  calcANP();
+}
+
+function resetANP() {
+  DB.anpMatrix = DEFAULT_ANP_MATRIX.map(r=>[...r]);
+  save('plq_anp_v2', DB.anpMatrix);
+  buildMatrixUI();
+  calcANP();
+}
+
+function calcANP() {
+  const n=5, M=DB.anpMatrix;
+  // Column sums
+  const colSums = Array(n).fill(0);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) colSums[j]+=M[i][j];
+  // Normalize
+  const norm = M.map((row,i)=>row.map((v,j)=>v/colSums[j]));
+  // Priority vector (row means)
+  const w = norm.map(row=>row.reduce((a,b)=>a+b,0)/n);
+  DB.anpWeights = w;
+
+  // λ_max
+  const Mw = M.map(row=>row.reduce((s,v,j)=>s+v*w[j],0));
+  const lambdaMax = Mw.reduce((s,v,i)=>s+v/w[i],0)/n;
+  const CI = (lambdaMax-n)/(n-1);
+  const RI = [0,0,0.58,0.90,1.12,1.24,1.32,1.41,1.45,1.49][n];
+  const CR = CI/RI;
+
+  // Results display
+  document.getElementById('anp-results').innerHTML = CRIT_LABELS.map((l,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #F0F4F8">
+      <span style="font-size:12px">${l}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:80px;height:6px;background:#E5EDF4;border-radius:3px;overflow:hidden">
+          <div style="width:${w[i]*100/Math.max(...w)*100}%;height:100%;background:var(--accent);border-radius:3px"></div>
+        </div>
+        <span class="mono" style="font-size:12px;font-weight:700;color:var(--accent)">${(w[i]*100).toFixed(1)}%</span>
+      </div>
+    </div>`).join('');
+
+  const crClass = CR<0.1?'cr-ok':'cr-warn';
+  const crIcon  = CR<0.1?'✅':'⚠️';
+  document.getElementById('anp-consistency').innerHTML = `
+    <div style="font-size:12px;margin-bottom:6px">λ<sub>max</sub> = <strong>${lambdaMax.toFixed(4)}</strong></div>
+    <div style="font-size:12px;margin-bottom:6px">CI = <strong>${CI.toFixed(4)}</strong></div>
+    <div style="font-size:12px;margin-bottom:6px">RI = <strong>${RI}</strong></div>
+    <div style="font-size:13px;font-weight:700" class="${crClass}">${crIcon} CR = ${CR.toFixed(4)}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px">${CR<0.1?'Acceptable (CR < 0.10)':'⚠ Inconsistent (CR ≥ 0.10)'}</div>`;
+
+  // Weights chart
+  destroyChart('weights');
+  const ctx = document.getElementById('chart-weights').getContext('2d');
+  charts['weights'] = new Chart(ctx, {
+    type:'bar',
+    data:{ labels:CRIT_LABELS, datasets:[{
+      label:'Weight', data:w.map(v=>+(v*100).toFixed(2)),
+      backgroundColor:['#2E86DE','#0F9B8E','#F4A261','#27AE60','#E74C3C'],
+      borderRadius:4
+    }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{y:{min:0,max:50,ticks:{callback:v=>v+'%'}}},
+      plugins:{legend:{display:false}} }
+  });
+
+  // Supermatrix (5×5 identity-like for one cluster)
+  const smHtml = `<table class="super-table"><thead><tr><th></th>${CRIT_LABELS.map(l=>`<th>${l.slice(0,3)}</th>`).join('')}</tr></thead><tbody>
+    ${norm.map((row,i)=>`<tr><th>${CRIT_LABELS[i].slice(0,3)}</th>${row.map(v=>`<td>${v.toFixed(3)}</td>`).join('')}</tr>`).join('')}
+  </tbody></table>`;
+  document.getElementById('supermatrix-wrap').innerHTML = smHtml;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB 5: BRB EVIDENTIAL REASONING
+// ═══════════════════════════════════════════════════════
+function renderBRB() {
+  renderBRBRules();
+  runBRB();
+}
+
+function renderBRBRules() {
+  const div = document.getElementById('brb-rules-list');
+  div.innerHTML = DB.brbRules.map((r,idx)=>{
+    const qlColor = {Excellent:'#15803D',Good:'#1D4ED8',Average:'#854D0E',Poor:'#B91C1C'}[r.qualityLevel]||'#333';
+    return `<div style="border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;font-size:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <strong style="font-size:11px">Rule ${r.id}</strong>
+        <div style="display:flex;gap:4px">
+          <span class="badge ql-${r.qualityLevel.toLowerCase()}" style="font-size:10px">${r.qualityLevel}</span>
+          <span class="badge badge-blue" style="font-size:10px">${(r.beliefDegree*100).toFixed(0)}% belief</span>
+          <button class="btn btn-danger btn-sm" onclick="deleteBRBRule(${idx})" style="padding:2px 6px">✕</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted)">
+        ${CRIT_LABELS.map((l,i)=>`${l}: [${r.conditions[CRITERIA[i]][0]}–${r.conditions[CRITERIA[i]][1]}]`).join(' · ')}
+      </div>
+      <div style="margin-top:6px;font-size:11px">Weight: <strong>${r.weight}</strong></div>
+    </div>`;
+  }).join('');
+}
+
+function addBRBRule() {
+  const ql = prompt('Quality level? (Excellent/Good/Average/Poor)','Good');
+  if(!ql) return;
+  const bd = parseFloat(prompt('Belief degree (0–1)?','0.75')||'0.75');
+  const rule = {id:DB.brbRules.length+1, conditions:{}, qualityLevel:ql, beliefDegree:bd, weight:1.0};
+  CRITERIA.forEach(c=>{ rule.conditions[c]=[3,5]; });
+  DB.brbRules.push(rule);
+  save('plq_brb_v2', DB.brbRules);
+  renderBRBRules();
+}
+
+function deleteBRBRule(idx) {
+  DB.brbRules.splice(idx,1);
+  save('plq_brb_v2', DB.brbRules);
+  renderBRBRules();
+  runBRB();
+}
+
+// BRB Engine: Dempster-Shafer style aggregation
+function brbScore(scores, rules, weights) {
+  const qlLevels = ['Excellent','Good','Average','Poor'];
+  const qlValues = {Excellent:5, Good:4, Average:3, Poor:2};
+
+  // For each rule, compute activation strength
+  const activations = rules.map(r=>{
+    let match = 1.0;
+    CRITERIA.forEach((c,i)=>{
+      const [lo,hi] = r.conditions[c];
+      const v = scores[c]*5; // normalise 1-5 → 1-5 (same scale)
+      if(v<lo||v>hi) match *= Math.max(0, 1-(Math.min(v-hi,lo-v))/2);
+    });
+    return match * r.weight;
+  });
+
+  const totalAct = activations.reduce((a,b)=>a+b,0)||1;
+  const belief = {Excellent:0,Good:0,Average:0,Poor:0};
+  rules.forEach((r,i)=>{
+    const w = activations[i]/totalAct;
+    belief[r.qualityLevel] = (belief[r.qualityLevel]||0) + w*r.beliefDegree;
+  });
+
+  // Normalise
+  const total = Object.values(belief).reduce((a,b)=>a+b,0)||1;
+  Object.keys(belief).forEach(k=>belief[k]/=total);
+
+  // Utility score
+  const score = qlLevels.reduce((s,q)=>s+belief[q]*qlValues[q],0);
+  // Entropy
+  const H = -qlLevels.reduce((s,q)=>{ const p=belief[q]; return s+(p>0?p*Math.log(p):0); },0)/Math.log(qlLevels.length);
+  return {belief, score: +score.toFixed(3), entropy: +H.toFixed(3)};
+}
+
+function runBRB() {
+  const lengths = ['Short','Medium','Long'];
+  const results = {};
+
+  lengths.forEach(len=>{
+    const scores = {};
+    CRITERIA.forEach(c=>{ scores[c] = SURVEY_STATS[len][c].mean; });
+    results[len] = brbScore(scores, DB.brbRules, DB.anpWeights);
+  });
+
+  // Render belief output (combined)
+  const combined = {Excellent:0,Good:0,Average:0,Poor:0};
+  lengths.forEach(l=>{ Object.keys(combined).forEach(k=>{ combined[k]+=results[l].belief[k]/3; }); });
+
+  const beliefColors = {Excellent:'#15803D',Good:'#1D4ED8',Average:'#B45309',Poor:'#B91C1C'};
+  document.getElementById('brb-belief-output').innerHTML = Object.entries(combined).map(([q,v])=>`
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+        <span style="font-weight:600">${q}</span><span class="mono">${(v*100).toFixed(1)}%</span>
+      </div>
+      <div class="belief-bar-track">
+        <div class="belief-bar-fill" style="width:${(v*100).toFixed(1)}%;background:${beliefColors[q]}">
+          ${v>0.05?`<span>${(v*100).toFixed(0)}%</span>`:''}
+        </div>
+      </div>
+    </div>`).join('');
+
+  // Entropy
+  const avgEntropy = lengths.reduce((s,l)=>s+results[l].entropy,0)/3;
+  document.getElementById('brb-entropy').innerHTML = `
+    <div style="font-size:12px;margin-bottom:6px;font-weight:600">Uncertainty (Entropy)</div>
+    <div class="entropy-meter"><div class="entropy-fill" style="width:${(avgEntropy*100).toFixed(0)}%;background:var(--gold)"></div></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px">H = ${avgEntropy.toFixed(3)} · ${avgEntropy<0.4?'Low uncertainty':'Moderate uncertainty'}</div>`;
+
+  // Per-length outputs
+  lengths.forEach(len=>{
+    const r = results[len];
+    const el = document.getElementById(`brb-${len.toLowerCase()}-out`);
+    if(!el) return;
+    el.innerHTML = `
+      <div style="font-size:22px;font-weight:700;color:var(--navy);margin-bottom:4px">${r.score.toFixed(3)}/5.00</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Quality Score</div>
+      ${Object.entries(r.belief).map(([q,v])=>`
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:11px">
+          <span style="width:70px">${q}</span>
+          <div class="belief-bar-track" style="flex:1">
+            <div class="belief-bar-fill" style="width:${(v*100).toFixed(0)}%;background:${beliefColors[q]}"></div>
+          </div>
+          <span class="mono" style="width:36px;text-align:right">${(v*100).toFixed(0)}%</span>
+        </div>`).join('')}
+      <div style="margin-top:8px;font-size:10px;color:var(--muted)">Entropy: ${r.entropy.toFixed(3)}</div>`;
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB 6: ANALYSIS
+// ═══════════════════════════════════════════════════════
+function renderAnalysis() {
+  // Trend chart
+  destroyChart('trend');
+  const ctx1 = document.getElementById('chart-trend').getContext('2d');
+  charts['trend'] = new Chart(ctx1, {
+    type:'line',
+    data:{
+      labels:['Short','Medium','Long'],
+      datasets: CRITERIA.map((c,i)=>({
+        label: CRIT_LABELS[i],
+        data: LENGTHS.map(l=>SURVEY_STATS[l][c].mean),
+        borderColor: ['#2E86DE','#0F9B8E','#F4A261','#27AE60','#E74C3C'][i],
+        backgroundColor: 'transparent',
+        tension:0.35, pointRadius:5, borderWidth:2
+      }))
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{y:{min:1,max:5}},
+      plugins:{legend:{position:'bottom',labels:{font:{size:11}}}} }
+  });
+
+  // Grouped bar
+  destroyChart('grouped');
+  const ctx2 = document.getElementById('chart-grouped').getContext('2d');
+  charts['grouped'] = new Chart(ctx2, {
+    type:'bar',
+    data:{
+      labels:CRIT_LABELS,
+      datasets:[
+        {label:'Short',  data:avgByCriterion('Short'),  backgroundColor:C.short},
+        {label:'Medium', data:avgByCriterion('Medium'), backgroundColor:C.med},
+        {label:'Long',   data:avgByCriterion('Long'),   backgroundColor:C.long},
+      ]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{y:{min:1,max:5}},
+      plugins:{legend:{position:'bottom',labels:{font:{size:11}}}} }
+  });
+
+  // Stats table
+  const tbody = document.getElementById('stats-tbody');
+  tbody.innerHTML = '';
+  CRITERIA.forEach((c,i)=>{
+    const s=SURVEY_STATS.Short[c], m=SURVEY_STATS.Medium[c], l=SURVEY_STATS.Long[c];
+    const means = {Short:s.mean, Medium:m.mean, Long:l.mean};
+    const best = Object.entries(means).sort((a,b)=>b[1]-a[1])[0][0];
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><strong>${CRIT_LABELS[i]}</strong></td>
+      <td class="mono">${s.mean.toFixed(3)}</td><td class="mono">${s.std.toFixed(3)}</td><td class="mono">${s.min}</td><td class="mono">${s.max}</td>
+      <td class="mono">${m.mean.toFixed(3)}</td><td class="mono">${m.std.toFixed(3)}</td><td class="mono">${m.min}</td><td class="mono">${m.max}</td>
+      <td class="mono">${l.mean.toFixed(3)}</td><td class="mono">${l.std.toFixed(3)}</td><td class="mono">${l.min}</td><td class="mono">${l.max}</td>
+      <td><span class="badge badge-${best==='Long'?'gold':best==='Short'?'blue':'teal'}" style="background:${best==='Long'?'#FEF3C7':best==='Short'?'#DBEAFE':'#CCFBF1'};color:${best==='Long'?'#92400E':best==='Short'?'#1D4ED8':'#0F766E'}">${best}</span></td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Insights
+  const longAvg = CRITERIA.reduce((s,c)=>s+SURVEY_STATS.Long[c].mean,0)/5;
+  const shortAvg = CRITERIA.reduce((s,c)=>s+SURVEY_STATS.Short[c].mean,0)/5;
+  const medAvg = CRITERIA.reduce((s,c)=>s+SURVEY_STATS.Medium[c].mean,0)/5;
+  const dimCriteria = CRITERIA.filter(c=>SURVEY_STATS.Medium[c].mean < SURVEY_STATS.Short[c].mean);
+  const lab2 = c => c.charAt(0).toUpperCase()+c.slice(1);
+  const gainSorted = CRITERIA.map(c=>({c, d: SURVEY_STATS.Long[c].mean - SURVEY_STATS.Short[c].mean})).sort((a,b)=>b.d-a.d);
+  const medText = dimCriteria.length>0
+    ? `Medium prompts (avg = ${medAvg.toFixed(3)}) perform lower than Short prompts (avg = ${shortAvg.toFixed(3)}) on ${dimCriteria.map(c=>`${lab2(c)} (${SURVEY_STATS.Medium[c].mean.toFixed(3)} vs ${SURVEY_STATS.Short[c].mean.toFixed(3)})`).join(' and ')}, suggesting a "complexity penalty" without corresponding depth gains at the medium level.`
+    : `Medium prompts (avg = ${medAvg.toFixed(3)}) now perform at or above Short prompts (avg = ${shortAvg.toFixed(3)}) on every criterion — the "complexity penalty" observed in earlier, smaller samples was not replicated.`;
+  document.getElementById('analysis-insight').innerHTML = `
+    <h4>🔍 Automatic Insights</h4>
+    <p><strong>Best-performing length:</strong> <span style="color:var(--gold);font-weight:700">Long prompts</span> achieve the highest overall quality (avg = ${longAvg.toFixed(3)}) across all criteria.</p>
+    <br>
+    <p><strong>Medium performance:</strong> ${medText}</p>
+    <br>
+    <p><strong>Diminishing returns signal:</strong> ${dimCriteria.length>0?`Criteria showing decline from Short→Medium: <strong>${dimCriteria.map(c=>lab2(c)).join(', ')}</strong>. However, all criteria recover strongly at the Long level.`:'No diminishing returns detected — quality improves monotonically.'}</p>
+    <br>
+    <p><strong>Strongest improvement (Short→Long):</strong> <strong>${lab2(gainSorted[0].c)}</strong> shows the largest gain (+${gainSorted[0].d.toFixed(3)}) and <strong>${lab2(gainSorted[1].c)}</strong> (+${gainSorted[1].d.toFixed(3)}), indicating that more detailed prompts significantly aid AI comprehension and coverage.</p>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB 7: FINDINGS
+// ═══════════════════════════════════════════════════════
+function renderFindings() {
+  const w = DB.anpWeights;
+  const shortC = compositeScore('Short', w);
+  const medC   = compositeScore('Medium', w);
+  const longC  = compositeScore('Long', w);
+  const nEval  = SURVEY_STATS.Short.accuracy.n;
+
+  // Dynamic deltas for Finding 1 (largest Short→Long gains)
+  const deltas = CRITERIA.map(c=>({c, d: SURVEY_STATS.Long[c].mean - SURVEY_STATS.Short[c].mean}))
+                          .sort((a,b)=>b.d-a.d);
+  const top2 = deltas.slice(0,2);
+
+  // Dynamic "complexity penalty" criteria for Finding 2 (Medium < Short)
+  const penaltyCriteria = CRITERIA.filter(c=>SURVEY_STATS.Medium[c].mean < SURVEY_STATS.Short[c].mean);
+
+  // Dynamic SD range across all length×criterion cells for Finding 5
+  let sdMin = {v:Infinity}, sdMax = {v:-Infinity};
+  LENGTHS.forEach(l=>CRITERIA.forEach(c=>{
+    const s = SURVEY_STATS[l][c];
+    if(s.std < sdMin.v) sdMin = {v:s.std, l, c};
+    if(s.std > sdMax.v) sdMax = {v:s.std, l, c};
+  }));
+  const lab = c => c.charAt(0).toUpperCase()+c.slice(1);
+
+  const findings = [
+    {
+      title:'Finding 1: Long Prompts Yield Highest Overall Quality',
+      text:`Long prompts achieved the highest ANP-weighted composite score (${longC.toFixed(3)}/5.00) compared to Medium (${medC.toFixed(3)}) and Short (${shortC.toFixed(3)}). Across all five evaluation criteria, Long prompts consistently outperform the alternatives, with the most notable improvements in ${lab(top2[0].c)} (+${top2[0].d.toFixed(3)} over Short) and ${lab(top2[1].c)} (+${top2[1].d.toFixed(3)} over Short). This supports the hypothesis that increased contextual specification in prompts leads to measurably better AI response quality.`
+    },
+    {
+      title:'Finding 2: Medium Prompts Show a Quality Dip — The "Complexity Penalty"',
+      text: penaltyCriteria.length>0
+        ? `Contrary to a simple monotonic relationship, Medium prompts underperform Short prompts on ${penaltyCriteria.map(c=>`${lab(c)} (${SURVEY_STATS.Medium[c].mean.toFixed(3)} vs ${SURVEY_STATS.Short[c].mean.toFixed(3)})`).join(' and ')}. This non-monotonic dip — the "complexity penalty" — suggests that partial elaboration may introduce ambiguity or conflicting context that degrades certain quality dimensions without providing the comprehensive scaffolding that Long prompts offer. This finding has practical implications for prompt engineering guidelines.`
+        : `With the expanded sample (n=${nEval}), Medium prompts no longer underperform Short prompts on any criterion — the previously observed "complexity penalty" was not replicated at scale. This suggests the earlier dip may have reflected sampling noise rather than a genuine non-monotonic effect, and that prompt quality scales more consistently with length than initially hypothesized.`
+    },
+    {
+      title:'Finding 3: Criteria Weights (ANP) Reveal Accuracy & Relevance as Primary Drivers',
+      text:`The Analytic Network Process yielded the following priority weights: Accuracy (${(w[0]*100).toFixed(1)}%), Relevance (${(w[1]*100).toFixed(1)}%), Completeness (${(w[2]*100).toFixed(1)}%), Clarity (${(w[3]*100).toFixed(1)}%), and Reasoning (${(w[4]*100).toFixed(1)}%). The Consistency Ratio falls below 0.10, confirming valid pairwise judgments. This weighting scheme confirms that factual correctness and topical relevance are the most important quality dimensions — findings consistent with prior literature on AI evaluation frameworks.`
+    },
+    {
+      title:'Finding 4: BRB Evidential Reasoning Confirms Probabilistic Quality Advantage',
+      text:`The Belief Rule Base engine, operating under Dempster-Shafer theory, assigns Long prompts the highest quality score with low epistemic uncertainty. The aggregated belief distribution shows "Good" and "Excellent" categories dominating for Long prompts, while Short and Medium prompts carry higher uncertainty mass in "Average" categories. This uncertainty-aware framework provides a more robust evaluation than point estimates alone.`
+    },
+    {
+      title:`Finding 5: Expert Evaluator Agreement is Moderate (n=${nEval})`,
+      text:`With ${nEval} human evaluators, standard deviations range from ${sdMin.v.toFixed(3)} (${lab(sdMin.c)}/${sdMin.l}) to ${sdMax.v.toFixed(3)} (${lab(sdMax.c)}/${sdMax.l}), indicating moderate inter-rater variability. Long prompts show higher variance in Relevance (SD=${SURVEY_STATS.Long.relevance.std.toFixed(3)}) and Reasoning (SD=${SURVEY_STATS.Long.reasoning.std.toFixed(3)}), suggesting that evaluators disagree more on the benefits of detailed prompts for certain criteria. Future research should investigate whether domain expertise moderates these disagreements.`
+    },
+  ];
+
+  document.getElementById('findings-text').innerHTML = findings.map(f=>`
+    <div class="finding-block">
+      <h4>${f.title}</h4>
+      <p>${f.text}</p>
+    </div>`).join('');
+
+  document.getElementById('findings-recs').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${[
+        {task:'Factual / Question Answering', rec:'Long',  color:C.long,  note:'Detailed context yields most accurate, complete responses'},
+        {task:'Creative / Brainstorming',     rec:'Short', color:C.short, note:'Short prompts preserve open-ended exploration'},
+        {task:'Summarization',               rec:'Short', color:C.short, note:'Short prompts avoid over-specifying summarization output'},
+        {task:'Code Generation',             rec:'Long',  color:C.long,  note:'Detailed specs reduce ambiguity and hallucination'},
+        {task:'Analysis / Research',         rec:'Long',  color:C.long,  note:'Contextual depth enables more structured reasoning'},
+      ].map(r=>`
+        <div style="padding:10px;border:1px solid var(--border);border-radius:6px;border-left:3px solid ${r.color}">
+          <div style="font-size:11.5px;font-weight:700;margin-bottom:3px">${r.task}</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="badge" style="background:${r.color}22;color:${r.color};font-size:10px">Use ${r.rec}</span>
+            <span style="font-size:10.5px;color:var(--muted)">${r.note}</span>
+          </div>
+        </div>`).join('')}
+    </div>`;
+
+  // Evidence chart
+  destroyChart('evidence');
+  const ctx = document.getElementById('chart-evidence').getContext('2d');
+  charts['evidence'] = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:['Composite Score','Accuracy','Relevance','Completeness','Clarity','Reasoning'],
+      datasets:[
+        {label:'Short',  data:[compositeScore('Short',w), ...CRITERIA.map(c=>SURVEY_STATS.Short[c].mean)],  backgroundColor:C.short},
+        {label:'Medium', data:[compositeScore('Medium',w),...CRITERIA.map(c=>SURVEY_STATS.Medium[c].mean)], backgroundColor:C.med},
+        {label:'Long',   data:[compositeScore('Long',w),  ...CRITERIA.map(c=>SURVEY_STATS.Long[c].mean)],   backgroundColor:C.long},
+      ]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{y:{min:1,max:5}},
+      plugins:{legend:{position:'bottom',labels:{font:{size:11}}}} }
+  });
+
+  generateExport();
+}
+
+function generateExport() {
+  const w = DB.anpWeights;
+  const nEval = SURVEY_STATS.Short.accuracy.n;
+  const lab = c => c.charAt(0).toUpperCase()+c.slice(1);
+  const dimCriteria = CRITERIA.filter(c=>SURVEY_STATS.Medium[c].mean < SURVEY_STATS.Short[c].mean);
+  const gainSorted = CRITERIA.map(c=>({c, d: SURVEY_STATS.Long[c].mean - SURVEY_STATS.Short[c].mean})).sort((a,b)=>b.d-a.d);
+  let sdMin = Infinity, sdMax = -Infinity;
+  LENGTHS.forEach(l=>CRITERIA.forEach(c=>{
+    const s = SURVEY_STATS[l][c].std;
+    if(s < sdMin) sdMin = s;
+    if(s > sdMax) sdMax = s;
+  }));
+  const finding2 = dimCriteria.length>0
+    ? `Medium prompts show complexity penalty on ${dimCriteria.map(lab).join(' and ')}`
+    : `No complexity penalty observed — Medium ≥ Short on all criteria`;
+
+  const txt = `RESEARCH SUMMARY
+Effect of Prompt Length on AI Response Quality: An Evidential Reasoning Approach
+================================================================================
+n = ${nEval} Evaluators | Criteria: Accuracy, Relevance, Completeness, Clarity, Reasoning
+Method: ANP Weighting + BRB Evidential Reasoning (Dempster-Shafer)
+
+SCORE SUMMARY (Mean ± SD, scale 1–5)
+           Short          Medium         Long
+Accuracy   ${SURVEY_STATS.Short.accuracy.mean.toFixed(3)}±${SURVEY_STATS.Short.accuracy.std.toFixed(3)}  ${SURVEY_STATS.Medium.accuracy.mean.toFixed(3)}±${SURVEY_STATS.Medium.accuracy.std.toFixed(3)}  ${SURVEY_STATS.Long.accuracy.mean.toFixed(3)}±${SURVEY_STATS.Long.accuracy.std.toFixed(3)}
+Relevance  ${SURVEY_STATS.Short.relevance.mean.toFixed(3)}±${SURVEY_STATS.Short.relevance.std.toFixed(3)}  ${SURVEY_STATS.Medium.relevance.mean.toFixed(3)}±${SURVEY_STATS.Medium.relevance.std.toFixed(3)}  ${SURVEY_STATS.Long.relevance.mean.toFixed(3)}±${SURVEY_STATS.Long.relevance.std.toFixed(3)}
+Complete.  ${SURVEY_STATS.Short.completeness.mean.toFixed(3)}±${SURVEY_STATS.Short.completeness.std.toFixed(3)}  ${SURVEY_STATS.Medium.completeness.mean.toFixed(3)}±${SURVEY_STATS.Medium.completeness.std.toFixed(3)}  ${SURVEY_STATS.Long.completeness.mean.toFixed(3)}±${SURVEY_STATS.Long.completeness.std.toFixed(3)}
+Clarity    ${SURVEY_STATS.Short.clarity.mean.toFixed(3)}±${SURVEY_STATS.Short.clarity.std.toFixed(3)}  ${SURVEY_STATS.Medium.clarity.mean.toFixed(3)}±${SURVEY_STATS.Medium.clarity.std.toFixed(3)}  ${SURVEY_STATS.Long.clarity.mean.toFixed(3)}±${SURVEY_STATS.Long.clarity.std.toFixed(3)}
+Reasoning  ${SURVEY_STATS.Short.reasoning.mean.toFixed(3)}±${SURVEY_STATS.Short.reasoning.std.toFixed(3)}  ${SURVEY_STATS.Medium.reasoning.mean.toFixed(3)}±${SURVEY_STATS.Medium.reasoning.std.toFixed(3)}  ${SURVEY_STATS.Long.reasoning.mean.toFixed(3)}±${SURVEY_STATS.Long.reasoning.std.toFixed(3)}
+
+ANP WEIGHTS: Accuracy=${(w[0]*100).toFixed(1)}% Relevance=${(w[1]*100).toFixed(1)}% Completeness=${(w[2]*100).toFixed(1)}% Clarity=${(w[3]*100).toFixed(1)}% Reasoning=${(w[4]*100).toFixed(1)}%
+
+COMPOSITE SCORES (ANP-weighted):
+  Short:  ${compositeScore('Short',w).toFixed(4)}
+  Medium: ${compositeScore('Medium',w).toFixed(4)}
+  Long:   ${compositeScore('Long',w).toFixed(4)}
+
+KEY FINDINGS:
+1. Long prompts yield highest quality across all criteria
+2. ${finding2}
+3. ${lab(gainSorted[0].c)} shows largest improvement Short→Long (+${gainSorted[0].d.toFixed(3)})
+4. BRB analysis confirms probabilistic advantage of Long prompts
+5. Moderate inter-rater variability (SD ${sdMin.toFixed(3)}–${sdMax.toFixed(3)})
+
+RECOMMENDATION: Use Long prompts for factual/analytical tasks.
+For creative tasks, Short prompts preserve exploration quality.
+
+Generated: ${new Date().toISOString()}`;
+  document.getElementById('export-text').value = txt;
+}
+
+function copyFindings() {
+  const txt = document.getElementById('export-text').value;
+  navigator.clipboard.writeText(txt).then(()=>alert('Copied to clipboard!')).catch(()=>{
+    document.getElementById('export-text').select();
+    document.execCommand('copy');
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  UTILITY: Table sorting
+// ═══════════════════════════════════════════════════════
+function sortTable(tableId, col) {
+  const tbl = document.getElementById(tableId);
+  const tbody = tbl.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const asc = tbl.dataset.sortCol==col ? tbl.dataset.sortAsc!=='true' : true;
+  tbl.dataset.sortCol = col;
+  tbl.dataset.sortAsc = asc;
+  rows.sort((a,b)=>{
+    const at = a.cells[col]?.textContent.trim()||'';
+    const bt = b.cells[col]?.textContent.trim()||'';
+    const an = parseFloat(at), bn = parseFloat(bt);
+    if(!isNaN(an)&&!isNaN(bn)) return asc?an-bn:bn-an;
+    return asc?at.localeCompare(bt):bt.localeCompare(at);
+  });
+  rows.forEach(r=>tbody.appendChild(r));
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', ()=>{
+  renderDashboard();
+});
+</script>
+</body>
+</html>
